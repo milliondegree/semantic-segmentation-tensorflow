@@ -794,5 +794,5 @@ if __name__ == '__main__':
 	net.train(X, y, model_name = 'model_vggfcn_1_49',
 	 batch_size = 20, learning_rate = 5e-5, epoch = 100, restore = True, N_worst = 5e5, thre = 0.7)
 	# else:
-	# 	exit(0)
+	# 	exit(0) 
 
