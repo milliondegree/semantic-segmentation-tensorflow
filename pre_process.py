@@ -1,8 +1,8 @@
 import numpy as np 
 from image2array import get_file_lists, get_data
 
-HGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/HGG/'
-LGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/LGG/'
+HGG_base = './data/Brain_Tumor/BRATS2015_Training/HGG/'
+LGG_base = './data/Brain_Tumor/BRATS2015_Training/LGG/'
 
 
 def remove_background_3d_with_label(img, label):
