@@ -6,8 +6,8 @@ import random
 
 from mha_sitk import sitk_imshow
 
-HGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/HGG/'
-LGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/LGG/'
+HGG_base = './data/Brain_Tumor/BRATS2015_Training/HGG/'
+LGG_base = './data/Brain_Tumor/BRATS2015_Training/LGG/'
 
 data_base = '/home/ff/data/Brain_Tumor/npz/'
 
