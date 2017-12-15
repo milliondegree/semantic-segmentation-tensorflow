@@ -2,8 +2,8 @@ import numpy as np
 from medpy.io import load, header
 import matplotlib.pyplot as plt
 
-HGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/HGG/'
-LGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/LGG/'
+HGG_base = './data/Brain_Tumor/BRATS2015_Training/HGG/'
+LGG_base = './data/Brain_Tumor/BRATS2015_Training/LGG/'
 
 if __name__ == '__main__':
 
