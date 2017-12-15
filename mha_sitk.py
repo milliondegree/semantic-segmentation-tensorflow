@@ -4,8 +4,8 @@ from skimage import io
 import SimpleITK as sitk
 import matplotlib.pyplot as plt
 
-HGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/HGG/'
-LGG_base = '/home/ff/data/Brain_Tumor/BRATS2015_Training/LGG/'
+HGG_base = './data/Brain_Tumor/BRATS2015_Training/HGG/'
+LGG_base = './data/Brain_Tumor/BRATS2015_Training/LGG/'
 
 
 def sitk_show(img, title=None, margin=0.05, dpi=40 ):
