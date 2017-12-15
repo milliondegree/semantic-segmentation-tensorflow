@@ -110,6 +110,7 @@ def select_val_set_3d(X, y):
 def Precision(prob, label):
 	'''
 	TP / (TP + FN)
+	Infact it is recall 0_0
 	'''
 
 	t_0 = np.array([1, 0, 0, 0, 0])
