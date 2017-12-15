@@ -788,11 +788,8 @@ if __name__ == '__main__':
 
 	print X.shape, y.shape		
 
-	# ans = raw_input('Do you want to continue? [y/else]: ')
-	# if ans == 'y':
 	net = FCNN_BASIC(input_shape = (240, 240, 4), num_classes = 5)
 	net.train(X, y, model_name = 'model_vggfcn_1_49',
 	 batch_size = 20, learning_rate = 5e-5, epoch = 100, restore = True, N_worst = 5e5, thre = 0.7)
-	# else:
-	# 	exit(0) 
+
 
