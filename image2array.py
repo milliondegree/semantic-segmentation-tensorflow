@@ -9,7 +9,7 @@ from mha_sitk import sitk_imshow
 HGG_base = './data/Brain_Tumor/BRATS2015_Training/HGG/'
 LGG_base = './data/Brain_Tumor/BRATS2015_Training/LGG/'
 
-data_base = '/home/ff/data/Brain_Tumor/npz/'
+data_base = './data/Brain_Tumor/npz/'
 
 
 def write2File(data, labels, name):
@@ -21,26 +21,24 @@ def write2File(data, labels, name):
 
 def get_data(filelists, label):
 
-	train_np = np.empty([0, 240, 240, 155, 4], dtype = 'int16')
-	temp_np = np.empty([0, 240, 240, 155], dtype = 'int16')
-	train_label_np = np.empty([0, 240, 240, 155], dtype = 'int16')
+	train_np = np.empty([0, 155, 240, 240, 4], dtype = 'int16')
+	temp_np = np.empty([0, 155, 240, 240], dtype = 'int16')
+	train_label_np = np.empty([0, 155, 240, 240], dtype = 'int16')
 
 	for filelist in filelists:
 		for filename in filelist:
 			img = sitk.ReadImage(filename)
 			imgdata = sitk.GetArrayFromImage(img) 
-			imgdata = imgdata.transpose((2, 1, 0))
-			temp_np = np.append(temp_np, imgdata.reshape(1, 240, 240, 155), axis = 0)
+			temp_np = np.append(temp_np, imgdata.reshape(1, 155, 240, 240), axis = 0)
 		temp_np = temp_np.transpose((1, 2, 3, 0))
-		train_np = np.append(train_np, temp_np.reshape(1, 240, 240, 155, 4), axis = 0)
+		train_np = np.append(train_np, temp_np.reshape(1, 155, 240, 240, 4), axis = 0)
 		print train_np.shape
-		temp_np = np.empty([0, 240, 240, 155], dtype = 'int16')
+		temp_np = np.empty([0, 155, 240, 240], dtype = 'int16')
 
 	for filename in label:
 		img = sitk.ReadImage(filename)
 		imgdata = sitk.GetArrayFromImage(img)
-		imgdata = imgdata.transpose((2, 1, 0))
-		train_label_np = np.append(train_label_np, imgdata.reshape(1, 240, 240, 155), axis = 0)
+		train_label_np = np.append(train_label_np, imgdata.reshape(1, 155, 240, 240), axis = 0)
 		print train_label_np.shape
 
 	return train_np, train_label_np
@@ -73,6 +71,15 @@ def get_file_lists(topdir):
 				i = 0
 
 	return file_lists, label_list
+
+
+def Array2Image(from_path, to_path, array):
+	lists, _ = get_file_lists(from_path)
+	for i in xrange(len(lists)):
+		num = lists[i][0].split('.')[-2]
+		img = sitk.GetImageFromArray(array[i])
+		sitk.WriteImage(img, to_path + '/VSD.Seg_zjc.' + num + '.mha')
+
 
 
  
