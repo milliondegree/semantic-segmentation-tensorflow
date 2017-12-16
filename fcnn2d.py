@@ -125,14 +125,14 @@ class FCNN_2D:
 		# judge whether to restore from saved models
 		if restore:
 			print 'loading from model' + model_name
-			start_epoch = np.int(model_name.split('_')[-1])
+			start_epoch = np.int(model_name.split('_')[-1]) + 1
 			saver.restore(self.sess, './models/' + model_name + '.ckpt')
 		else:
 			start_epoch = 0
 			self.sess.run(tf.global_variables_initializer())
 
 		# Start training 
-		for e in xrange(start_epoch + 1, start_epoch + epoch + 1):
+		for e in xrange(start_epoch, start_epoch + epoch):
 
 			X_train, y_train, X_val, y_val = select_val_set(X_input, y_input)
 			X_train, y_train = remove_background_3d_with_label(X_train, y_train)
@@ -364,14 +364,14 @@ class FCNN_2D:
 			# judge whether to restore from saved models
 			if restore:
 				print 'loading from model' + model_name
-				start_epoch = np.int(model_name.split('_')[-1])
+				start_epoch = np.int(model_name.split('_')[-1]) + 1
 				saver.restore(self.sess, './models/' + model_name + '.ckpt')
 			else:
 				start_epoch = 0
 				self.sess.run(tf.global_variables_initializer())
 
 			# Start training 
-			for e in xrange(epoch):
+			for e in xrange(start_epoch, start_epoch + epoch):
 
 				X_train, y_train, X_val, y_val = select_val_set(X_input, y_input)
 				X_train, y_train = remove_background_3d_with_label(X_train, y_train)
@@ -466,7 +466,7 @@ class FCNN_2D:
 
 			print 'Training Finished!'
 
-	def multi_gpu_predict(self, model_name, X_test, y_test = None, dropout = 0.5):
+	def multi_gpu_predict(self, model_name, X_test, y_test = None, dropout = 0.5, num_gpu = 3):
 
 		with tf.device('cpu:0'):
 
@@ -474,7 +474,6 @@ class FCNN_2D:
         	 'global_step', [],
         	 initializer=tf.constant_initializer(0), trainable=False)
 
-			tower_grads = []
 			with tf.variable_scope(tf.get_variable_scope()):
 				for i in xrange(num_gpu):
 					with tf.device('/gpu:%d' % i):
@@ -494,22 +493,12 @@ class FCNN_2D:
 							tf.add_to_collection('num_pixels', num_pixels)
 
 							tf.get_variable_scope().reuse_variables()
-							grads = optimizer.compute_gradients(loss)
-							tower_grads.append(grads)
 
 			total_loss = tf.add_n(tf.get_collection('losses'), name = 'total_loss')
 			total_prob = tf.concat(tf.get_collection('probs'), axis = 0, name = 'total_loss')
 			total_label = tf.concat(tf.get_collection('labels'), axis = 0, name = 'total_label')
 			total_confusion_matrix = self.confusion_matrix(total_prob, total_label)
 			total_num_pixels = tf.add_n(tf.get_collection('num_pixels'), name = 'total_num_pixels')
-
-			grads = self._average_gradients(tower_grads)
-			apply_gradient_op = optimizer.apply_gradients(grads, global_step=global_step)
-
-			variable_averages = tf.train.ExponentialMovingAverage(0.9999, global_step)
-			variables_averages_op = variable_averages.apply(tf.trainable_variables())
-
-			train_op = tf.group(apply_gradient_op, variables_averages_op)
 
 			saver = tf.train.Saver()
 			print 'loading from model' + model_name 
@@ -518,29 +507,32 @@ class FCNN_2D:
 			if y_test is not None:
 
 				if len(X_test.shape) == 5:
+					N, D, W, H, C = X_test.shape
 					mean_pre = np.zeros([X_test.shape[0]])
 					mean_IU = np.zeros([X_test.shape[0]])
 					mean_dice = np.zeros([X_test.shape[0]])
 					
 					# caculate every 3D image 
-					for i in xrange(X_test.shape[0]):
+					for i in xrange(N):
 						label_val = np.empty([0, 5])
 						prob_val = np.empty([0, 5])
 
-						batch_size_test = X_val.shape[0] // num_gpu
-						X_test_list_val = []
-						y_test_list_val = []
-						for j in xrange(num_gpu):
-							X_test_list_val.append(X_test[i * batch_size_test: (i + 1) * batch_size_test])
-							y_test_list_val.append(y_test[i * batch_size_test: (i + 1) * batch_size_test])
-						prob_val_t, label_val_t, confusion_matrix_val = self.sess.run([
-							total_prob, total_label, total_confusion_matrix], feed_dict = {
-							tuple(tf.get_collection('Xs')): tuple(X_test_list_val), tuple(tf.get_collection('ys')): tuple(y_test_list_val), 
-							self.dropout: dropout, self.is_training: False})
+						# batch_size_test = X_test.shape[0] // num_gpu
+						
+						for k in xrange(5):
+							X_test_list_val = []
+							y_test_list_val = []
+							for j in xrange(num_gpu):
+								X_test_list_val.append(X_test[i, D * k / 5 + 31 * j // num_gpu: D * k / 5 + 31 * (j + 1) // num_gpu])
+								y_test_list_val.append(y_test[i, D * k / 5 + 31 * j // num_gpu: D * k / 5 + 31 * (j + 1) // num_gpu])
+							prob_val_t, label_val_t, confusion_matrix_val = self.sess.run([
+								total_prob, total_label, total_confusion_matrix], feed_dict = {
+								tuple(tf.get_collection('Xs')): tuple(X_test_list_val), tuple(tf.get_collection('ys')): tuple(y_test_list_val), 
+								self.dropout: dropout, self.is_training: False})
 
-						label_val_t = label_val_t.reshape((-1, self.num_classes))
-						label_val = np.concatenate([label_val, label_val_t], axis = 0)
-						prob_val = np.concatenate([prob_val, prob_val_t], axis = 0)
+							label_val_t = label_val_t.reshape((-1, self.num_classes))
+							label_val = np.concatenate([label_val, label_val_t], axis = 0)
+							prob_val = np.concatenate([prob_val, prob_val_t], axis = 0)
 
 						pre, IU, dice = self.evaluate(prob_val, label_val)
 
@@ -557,12 +549,11 @@ class FCNN_2D:
 
 						
 				elif len(X_test.shape) == 4:
-					batch_size_test = X_val.shape[0] // num_gpu
 					X_test_list_val = []
 					y_test_list_val = []
 					for j in xrange(num_gpu):
-						X_test_list_val.append(X_test[i * batch_size_test: (i + 1) * batch_size_test])
-						y_test_list_val.append(y_test[i * batch_size_test: (i + 1) * batch_size_test])
+						X_test_list_val.append(X_test[j * X_test.shape[0] // num_gpu: (j + 1) * X_test.shape[0] // num_gpu])
+						y_test_list_val.append(y_test[j * X_test.shape[0] // num_gpu: (j + 1) * X_test.shape[0] // num_gpu])
 					prob_val_t, label_val_t, confusion_matrix_val = self.sess.run([
 						total_prob, total_label, total_confusion_matrix], feed_dict = {
 						tuple(tf.get_collection('Xs')): tuple(X_test_list_val), tuple(tf.get_collection('ys')): tuple(y_test_list_val), 
@@ -586,7 +577,7 @@ class FCNN_2D:
 					for i in xrange(N):
 						X_test_list = []
 						for j in xrange(num_gpu):
-							X_test_list.append(X_test[j * D // 3:(j + 1) * D // 3])
+							X_test_list.append(X_test[i, j * D // 3:(j + 1) * D // 3])
 						prob_val = self.sess.run(total_prob, feed_dict = {tuple(tf.get_collection('Xs')): tuple(X_test_list_val),
 						 self.dropout: dropout, self.is_training: False})
 						result[i] = np.argmax(prob_val.reshape(D, W, H, C), axis = -1)
@@ -788,8 +779,11 @@ if __name__ == '__main__':
 
 	print X.shape, y.shape		
 
+	# ans = raw_input('Do you want to continue? [y/else]: ')
+	# if ans == 'y':
 	net = FCNN_BASIC(input_shape = (240, 240, 4), num_classes = 5)
 	net.train(X, y, model_name = 'model_vggfcn_1_49',
 	 batch_size = 20, learning_rate = 5e-5, epoch = 100, restore = True, N_worst = 5e5, thre = 0.7)
-
+	# else:
+	# 	exit(0)
 
