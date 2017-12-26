@@ -37,7 +37,7 @@ class FCNN_2D:
 	def confusion_matrix(self, prob, label):
 		labels = tf.argmax(label, axis = -1)
 		probs = tf.argmax(prob, axis = -1)
-		return tf.confusion_matrix(labels, probs)
+		return tf.confusion_matrix(labels, probs, num_classes = self.num_classes)
 
 
 	def build(self, X, y):
@@ -220,6 +220,59 @@ class FCNN_2D:
 
 		return pre, IU, dice
 
+	def eval_with_conmat(self, conmat):
+		
+		if self.num_classes == 4:
+			recall_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / np.sum(conmat[1:4])
+			pre_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / np.sum(conmat[:, 1:4])
+			IoU_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / (np.sum(conmat) - conmat[0, 0])
+			dice_comp = np.sum(conmat[1:4, 1:4]) * 2.0 / (np.sum(conmat[1:4]) + np.sum(conmat[:, 1:4]))
+
+			recall_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / np.sum(conmat[(1, 3), :])
+			pre_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / np.sum(conmat[:, (1, 3)])
+			IoU_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / (np.sum(conmat[:, (1, 3)]) +\
+			 np.sum(conmat[(1, 3), :]) - np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]))
+			dice_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 2.0 / (np.sum(conmat[:, (1, 3)]) + np.sum(conmat[(1, 3), :]))
+
+			recall_enh = conmat[3, 3] * 1.0 / np.sum(conmat[3])
+			pre_enh = conmat[3, 3] * 1.0 / np.sum(conmat[:, 3])
+			Iou_enh = conmat[3, 3] * 1.0 / (np.sum(conmat[:, 3]) + np.sum(conmat[3]) - conmat[3, 3])
+			dice_enh = conmat[3, 3] * 2.0 / (np.sum(conmat[:, 3]) + np.sum(conmat[3]))
+
+			recall_non = conmat[0, 0] * 1.0 / np.sum(conmat[0])
+			pre_non = conmat[0, 0] * 1.0 / np.sum(conmat[:, 0])
+			Iou_non = conmat[0, 0] * 1.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]) - conmat[0, 0])
+			dice_non = conmat[0, 0] * 2.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]))
+
+		if self.num_classes == 5:
+			recall_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / np.sum(conmat[1:5])
+			pre_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / np.sum(conmat[:, 1:5])
+			IoU_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / (np.sum(conmat) - conmat[0, 0])
+			dice_comp = np.sum(conmat[1:5, 1:5]) * 2.0 / (np.sum(conmat[1:5]) + np.sum(conmat[:, 1:5]))
+
+			recall_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)]))  * 1.0 / (np.sum(conmat[(1, 3, 4), :]) + 1e-10)
+			pre_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 1.0 / (np.sum(conmat[:, (1, 3, 4)]) + 1e-10)
+			IoU_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 1.0 / ((np.sum(conmat[:, (1, 3, 4)]) +\
+			 np.sum(conmat[(1, 3, 4), :]) - np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) + 1e-10)
+			dice_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 2.0 / ((np.sum(conmat[(1, 3, 4), :]) +\
+			 np.sum(conmat[(1, 3, 4), :])) + 1e-10)
+
+			recall_enh = (conmat[4, 4]) * 1.0 / (np.sum(conmat[4]) + 1e-10)
+			pre_enh = (conmat[4, 4]) * 1.0 / (np.sum(conmat[:, 4]) + 1e-10)
+			Iou_enh = (conmat[4, 4]) * 1.0 / ((np.sum(conmat[:, 4]) + np.sum(conmat[4]) - conmat[4, 4]) + 1e-10)
+			dice_enh = (conmat[4, 4]) * 2.0 / ((np.sum(conmat[:, 4]) + np.sum(conmat[4])) + 1e-10)
+
+			recall_non = conmat[0, 0] * 1.0 / np.sum(conmat[0])
+			pre_non = conmat[0, 0] * 1.0 / np.sum(conmat[:, 0])
+			Iou_non = conmat[0, 0] * 1.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]) - conmat[0, 0])
+			dice_non = conmat[0, 0] * 2.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]))
+
+		return np.array([[recall_non, recall_comp, recall_kern, recall_enh], 
+						[pre_non, pre_comp, pre_kern, pre_enh], 
+						[Iou_non, IoU_comp, IoU_kern, Iou_enh], 
+						[dice_non, dice_comp, dice_kern, dice_enh]])
+
+
 
 	def predict(self, model_name, X_test, y_test = None, dropout = 0.5):
 
@@ -242,17 +295,23 @@ class FCNN_2D:
 				mean_pre = np.zeros([X_test.shape[0]])
 				mean_IU = np.zeros([X_test.shape[0]])
 				mean_dice = np.zeros([X_test.shape[0]])
+				conmat = np.empty([0, 4, 4])
 				for i in xrange(X_test.shape[0]):
 					label_val = np.empty([0, 5])
 					prob_val = np.empty([0, 5])
+					con_list = []
 					for j in xrange(X_test.shape[1] / 31):
 						label_val_t, prob_val_t, confusion_matrix_val = self.sess.run([label, prob, confusion_matrix], feed_dict = {
 							X: X_test[i, j * 31:(j+1) * 31], y: y_test[i, j * 31:(j+1) * 31], self.dropout: dropout, self.is_training: False})
 						label_val_t = label_val_t.reshape((-1, self.num_classes))
 						label_val = np.concatenate([label_val, label_val_t], axis = 0)
 						prob_val = np.concatenate([prob_val, prob_val_t], axis = 0)
+						con_list.append(confusion_matrix_val)
 
 					pre, IU, dice = self.evaluate(prob_val, label_val)
+					conmat_t = self.eval_with_conmat(np.sum(con_list, axis = 0))
+					conmat = np.append(conmat, conmat_t.reshape([1, 4, 4]), axis = 0)
+
 
 					print i
 					print pre, np.mean(pre)
@@ -264,7 +323,7 @@ class FCNN_2D:
 					mean_dice[i] = np.mean(dice)
 
 				print np.mean(mean_pre), '\n', np.mean(mean_IU), '\n', np.mean(mean_dice)
-
+				print np.mean(conmat, axis = 0)
 					
 			elif len(X_test.shape) == 4:
 				label_val, prob_val, confusion_matrix_val = self.sess.run([label, prob, confusion_matrix], feed_dict = {
@@ -310,7 +369,7 @@ class FCNN_2D:
 		dropout = 0.5, 
 		restore = False,
 		N_worst = 1e6,
-		thre = 0.9
+		thre = 1.0
 		):
 		
 		with tf.device('/cpu:0'):
@@ -332,11 +391,12 @@ class FCNN_2D:
 							X, y, label = self._get_input()
 							cross_entropy, prob, _ = self.build(X, label)
 							loss, num_pixels = self._bootstrapping_loss(cross_entropy, prob, label)
+							# loss = self._threshold_dice_loss(prob, label)
 
 							# add to collections
 							tf.add_to_collection('Xs', X)
 							tf.add_to_collection('ys', y)
-							tf.add_to_collection('labels', tf.reshape(label, [-1, 5]))
+							tf.add_to_collection('labels', tf.reshape(label, [-1, self.num_classes]))
 							tf.add_to_collection('losses', loss)
 							tf.add_to_collection('probs', prob)
 							tf.add_to_collection('num_pixels', num_pixels)
@@ -346,7 +406,7 @@ class FCNN_2D:
 							tower_grads.append(grads)
 
 			total_loss = tf.add_n(tf.get_collection('losses'), name = 'total_loss')
-			total_prob = tf.concat(tf.get_collection('probs'), axis = 0, name = 'total_loss')
+			total_prob = tf.concat(tf.get_collection('probs'), axis = 0, name = 'total_prob')
 			total_label = tf.concat(tf.get_collection('labels'), axis = 0, name = 'total_label')
 			total_confusion_matrix = self.confusion_matrix(total_prob, total_label)
 			total_num_pixels = tf.add_n(tf.get_collection('num_pixels'), name = 'total_num_pixels')
@@ -443,10 +503,14 @@ class FCNN_2D:
 				print 'dice: ', dice, ' mean: ', np.mean(dice)
 				print 'y: ', y_bin
 
-				if len(y_bin) == 4:
-					print confusion_matrix_val[:4] * 1.0 / y_bin.reshape(-1, 1)
+				if len(y_bin) == 3:
+					print confusion_matrix_val[:3] * 1.0 / y_bin[:3].reshape(-1, 1)
+				elif len(y_bin) == 4:
+					print confusion_matrix_val[:4] * 1.0 / y_bin[:4].reshape(-1, 1)
 				else:
 					print confusion_matrix_val * 1.0 / y_bin.reshape(-1, 1)
+
+				print self.eval_with_conmat(confusion_matrix_val)
 
 				print 'epoch {0} finished'.format(e)
 
@@ -471,8 +535,8 @@ class FCNN_2D:
 		with tf.device('cpu:0'):
 
 			global_step = tf.get_variable(
-        	 'global_step', [],
-        	 initializer=tf.constant_initializer(0), trainable=False)
+   			'global_step', [],
+   			 initializer=tf.constant_initializer(0), trainable=False)
 
 			with tf.variable_scope(tf.get_variable_scope()):
 				for i in xrange(num_gpu):
@@ -487,7 +551,7 @@ class FCNN_2D:
 							# add to collections
 							tf.add_to_collection('Xs', X)
 							tf.add_to_collection('ys', y)
-							tf.add_to_collection('labels', tf.reshape(label, [-1, 5]))
+							tf.add_to_collection('labels', tf.reshape(label, [-1, self.num_classes]))
 							tf.add_to_collection('losses', loss)
 							tf.add_to_collection('probs', prob)
 							tf.add_to_collection('num_pixels', num_pixels)
@@ -501,7 +565,8 @@ class FCNN_2D:
 			total_num_pixels = tf.add_n(tf.get_collection('num_pixels'), name = 'total_num_pixels')
 
 			saver = tf.train.Saver()
-			print 'loading from model' + model_name 
+
+			print 'loading from model ' + model_name 
 			saver.restore(self.sess, './models/' + model_name + '.ckpt')
 
 			if y_test is not None:
@@ -511,28 +576,30 @@ class FCNN_2D:
 					mean_pre = np.zeros([X_test.shape[0]])
 					mean_IU = np.zeros([X_test.shape[0]])
 					mean_dice = np.zeros([X_test.shape[0]])
+					conmat = np.empty([0, 4, 4])
 					
 					# caculate every 3D image 
 					for i in xrange(N):
-						label_val = np.empty([0, 5])
-						prob_val = np.empty([0, 5])
+						label_val = np.empty([0, self.num_classes])
+						prob_val = np.empty([0, self.num_classes])
 
 						# batch_size_test = X_test.shape[0] // num_gpu
-						
+						conmat_list = []
 						for k in xrange(5):
 							X_test_list_val = []
 							y_test_list_val = []
 							for j in xrange(num_gpu):
 								X_test_list_val.append(X_test[i, D * k / 5 + 31 * j // num_gpu: D * k / 5 + 31 * (j + 1) // num_gpu])
 								y_test_list_val.append(y_test[i, D * k / 5 + 31 * j // num_gpu: D * k / 5 + 31 * (j + 1) // num_gpu])
-							prob_val_t, label_val_t, confusion_matrix_val = self.sess.run([
-								total_prob, total_label, total_confusion_matrix], feed_dict = {
+							prob_val_t, label_val_t, confusion_matrix_val = self.sess.run(
+								[total_prob, total_label, total_confusion_matrix], feed_dict = {
 								tuple(tf.get_collection('Xs')): tuple(X_test_list_val), tuple(tf.get_collection('ys')): tuple(y_test_list_val), 
 								self.dropout: dropout, self.is_training: False})
 
 							label_val_t = label_val_t.reshape((-1, self.num_classes))
 							label_val = np.concatenate([label_val, label_val_t], axis = 0)
 							prob_val = np.concatenate([prob_val, prob_val_t], axis = 0)
+							conmat_list.append(confusion_matrix_val)
 
 						pre, IU, dice = self.evaluate(prob_val, label_val)
 
@@ -540,12 +607,16 @@ class FCNN_2D:
 						print pre, np.mean(pre)
 						print IU, np.mean(IU)
 						print dice, np.mean(dice)
+						conmat_t = self.eval_with_conmat(np.sum(conmat_list, axis = 0))
+						print conmat_t
 
 						mean_pre[i] = np.mean(pre)
 						mean_IU[i] = np.mean(IU)
 						mean_dice[i] = np.mean(dice)
+						conmat = np.append(conmat, conmat_t.reshape(1, 4, 4), axis = 0)
 
 					print np.mean(mean_pre), '\n', np.mean(mean_IU), '\n', np.mean(mean_dice)
+					print np.mean(conmat, axis = 0)
 
 						
 				elif len(X_test.shape) == 4:
@@ -663,7 +734,7 @@ class FCNN_2D:
 		class_weights = class_weights / tf.cast(count, tf.float32) 
 		weights = tf.reduce_sum(label * class_weights, axis = 1)
 
-		loss = tf.reduce_sum(cross_entropy * weights) / 5
+		loss = tf.reduce_sum(cross_entropy * weights) / self.num_classes
 		return loss
 
 	def _self_weighted_loss(self, cross_entropy, label):
@@ -681,21 +752,264 @@ class FCNN_2D:
 		'''
 		try to find worst N pixel in every class and caculate the average loss
 		'''
-		loss_matrix = tf.reshape(cross_entropy, [-1, 1]) * tf.reshape(tf.cast(label, tf.float32), [-1, 5])
+		loss_matrix = tf.reshape(cross_entropy, [-1, 1]) * tf.reshape(tf.cast(label, tf.float32), [-1, self.num_classes])
 		loss_matrix_t = tf.transpose(loss_matrix)
 
-		condition_matrix = tf.cast(prob < self.thre, tf.float32) * tf.reshape(label, [-1, 5])
+		condition_matrix = tf.cast(prob < self.thre, tf.float32) * tf.reshape(label, [-1, self.num_classes])
 		condition_matrix_t = tf.transpose(condition_matrix)
 
-		worst_n_matrix, _ = tf.nn.top_k(loss_matrix_t * condition_matrix_t, k = self.N_worst)
+		# worst_n_matrix, _ = tf.nn.top_k(loss_matrix_t * condition_matrix_t, k = self.N_worst)
 
 		count = tf.reduce_sum(condition_matrix_t, axis = 1)
 		num_pixels = tf.cast(tf.minimum(tf.cast(count, tf.int32), self.N_worst), tf.float32, name = 'minimum')
 
 		# loss = tf.reduce_mean(tf.reduce_sum(worst_n_matrix, axis = 1) / self.num_pixels)
-		loss = tf.reduce_sum(worst_n_matrix) / tf.reduce_sum(num_pixels)
+		loss = tf.reduce_sum(loss_matrix) / tf.reduce_sum(num_pixels)
 		return loss, num_pixels
 
+	
+	def _threshold_dice_loss(self, prob, label):
+
+		if self.num_classes == 5:
+
+			temp_0 = tf.constant([[1], [0], [0], [0], [0]], tf.float32)
+			label_0 = tf.matmul(label, temp_0)
+			prob_0 = tf.matmul(prob, temp_0)
+			dice_0 = - tf.log(2 * (tf.reduce_sum(prob_0 * label_0) + 1e-10) / (tf.reduce_sum(prob_0) + tf.reduce_sum(label_0) + 1e-10))
+			
+			temp_1 = tf.constant([[0], [1], [1], [1], [1]], tf.float32)
+			label_1 = tf.matmul(label, temp_1)
+			prob_1 = tf.matmul(prob, temp_1)
+			dice_1 = - tf.log(2 * (tf.reduce_sum(prob_1 * label_1) + 1e-10) / (tf.reduce_sum(prob_1) + tf.reduce_sum(label_1) + 1e-10))
+
+			temp_2 = tf.constant([[0], [1], [0], [1], [1]], tf.float32)
+			label_2 = tf.matmul(label, temp_2)
+			prob_2 = tf.matmul(prob, temp_2)
+			dice_2 = - tf.log(2 * (tf.reduce_sum(prob_2 * label_2) + 1e-10) / (tf.reduce_sum(prob_2) + tf.reduce_sum(label_2) + 1e-10))
+
+			temp_3 = tf.constant([[0], [0], [0], [0], [1]], tf.float32)
+			label_3 = tf.matmul(label, temp_3)
+			prob_3 = tf.matmul(prob, temp_3)
+			dice_3 = - tf.log(2 * (tf.reduce_sum(prob_3 * label_3) + 1e-10) / (tf.reduce_sum(prob_3) + tf.reduce_sum(label_3) + 1e-10))
+
+		elif self.num_classes == 4:
+
+			temp_0 = tf.constant([[1], [0], [0], [0]], tf.float32)
+			label_0 = tf.matmul(label, temp_0)
+			prob_0 = tf.matmul(prob, temp_0)
+			dice_0 = - tf.log(2 * (tf.reduce_sum(prob_0 * label_0) + 1e-10) / (tf.reduce_sum(prob_0) + tf.reduce_sum(label_0) + 1e-10))
+			
+			temp_1 = tf.constant([[0], [1], [1], [1]], tf.float32)
+			label_1 = tf.matmul(label, temp_1)
+			prob_1 = tf.matmul(prob, temp_1)
+			dice_1 = - tf.log(2 * (tf.reduce_sum(prob_1 * label_1) + 1e-10) / (tf.reduce_sum(prob_1) + tf.reduce_sum(label_1) + 1e-10))
+
+			temp_2 = tf.constant([[0], [1], [0], [1]], tf.float32)
+			label_2 = tf.matmul(label, temp_2)
+			prob_2 = tf.matmul(prob, temp_2)
+			dice_2 = - tf.log(2 * (tf.reduce_sum(prob_2 * label_2) + 1e-10) / (tf.reduce_sum(prob_2) + tf.reduce_sum(label_2) + 1e-10))
+
+			temp_3 = tf.constant([[0], [0], [0], [1]], tf.float32)
+			label_3 = tf.matmul(label, temp_3)
+			prob_3 = tf.matmul(prob, temp_3)
+			dice_3 = - tf.log(2 * (tf.reduce_sum(prob_3 * label_3) + 1e-10) / (tf.reduce_sum(prob_3) + tf.reduce_sum(label_3) + 1e-10))
+
+		return [dice_1, dice_2, dice_3]
+
+
+	def _binary_dice_loss(self, prob_list, label):
+
+		prob = []
+		for i in prob_list:
+			prob.append(tf.cast(i, tf.float32))
+
+		if self.num_classes == 4:
+			temp_0 = tf.constant([[0], [1], [1], [1]], tf.float32)
+			label_0 = tf.matmul(tf.cast(label, tf.float32), temp_0)
+			dice_0 = - tf.log(2 * (tf.reduce_sum(prob[0] * label_0) + 1e-10) / (tf.reduce_sum(prob[0]) + tf.reduce_sum(label_0) + 1e-10))
+
+			temp_1 = tf.constant([[0], [1], [0], [1]], tf.float32)
+			label_1 = tf.matmul(tf.cast(label, tf.float32), temp_1)
+			dice_1 = - tf.log(2 * (tf.reduce_sum(prob[1] * label_1) + 1e-10) / (tf.reduce_sum(prob[1]) + tf.reduce_sum(label_1) + 1e-10))
+
+			temp_2 = tf.constant([[0], [0], [0], [1]], tf.float32)
+			label_2 = tf.matmul(tf.cast(label, tf.float32), temp_2)
+			dice_2 = - tf.log(2 * (tf.reduce_sum(prob[2] * label_2) + 1e-10) / (tf.reduce_sum(prob[2]) + tf.reduce_sum(label_2) + 1e-10))
+
+		if self.num_classes == 5:
+			temp_0 = tf.constant([[0], [1], [1], [1], [1]], tf.float32)
+			label_0 = tf.matmul(tf.cast(label, tf.float32), temp_0)
+			temp_0_1 = tf.constant([[1], [0], [0], [0], [0]], tf.float32)
+			label_0_1 = tf.matmul(tf.cast(label, tf.float32), temp_0_1)
+			dice_0 = 1 - (tf.reduce_sum(prob[0] * label_0) + 1e-10) / (tf.reduce_sum(label_0) + tf.reduce_sum(prob[0]) + 1e-10) -\
+						 (tf.reduce_sum((1 - prob[0]) * label_0_1) + 1e-10) / (tf.reduce_sum(label_0_1) + tf.reduce_sum(1 - prob[0]) + 1e-10)
+
+			temp_1 = tf.constant([[0], [1], [0], [1], [1]], tf.float32)
+			label_1 = tf.matmul(tf.cast(label, tf.float32), temp_1)
+			temp_1_1 = tf.constant([[0], [0], [1], [0], [0]], tf.float32)
+			label_1_1 = tf.matmul(tf.cast(label, tf.float32), temp_1_1)
+			dice_1 = 1 - (tf.reduce_sum(prob[1] * label_1) + 1e-10) / (tf.reduce_sum(label_1) + tf.reduce_sum(prob[1]) + 1e-10) -\
+						 (tf.reduce_sum((prob[0] - prob[1]) * label_1_1) + 1e-10) /\
+						 (tf.reduce_sum(label_1_1) + tf.reduce_sum(prob[0] - prob[1]) + 1e-10)
+
+			temp_2 = tf.constant([[0], [0], [0], [0], [1]], tf.float32)
+			label_2 = tf.matmul(tf.cast(label, tf.float32), temp_2)
+			temp_2_1 = tf.constant([[0], [1], [0], [1], [0]], tf.float32)
+			label_2_1 = tf.matmul(tf.cast(label, tf.float32), temp_2_1)
+			dice_2 = 1 - (tf.reduce_sum(prob[2] * label_2) + 1e-10) / (tf.reduce_sum(label_2) + tf.reduce_sum(prob[2]) + 1e-10) -\
+						 (tf.reduce_sum((prob[1] - prob[2]) * label_2_1) + 1e-10) /\
+						 (tf.reduce_sum(label_2_1) + tf.reduce_sum(prob[1] - prob[2]) + 1e-10)
+
+		return [dice_0, dice_1, dice_2]
+
+	def _binary_pre_loss(self, prob_list, label):
+		
+		prob = []
+		for i in prob_list:
+			prob.append(tf.cast(i, tf.float32))
+
+		if self.num_classes == 4:
+			temp_0 = tf.constant([[0], [1], [1], [1]], tf.float32)
+			label_0 = tf.matmul(tf.cast(label, tf.float32), temp_0)
+			pre_0 = - tf.log((tf.reduce_sum(prob[0] * label_0) + 1e-10) / (tf.reduce_sum(prob[0]) + 1e-10))
+
+			temp_1 = tf.constant([[0], [1], [0], [1]], tf.float32)
+			label_1 = tf.matmul(tf.cast(label, tf.float32), temp_1)
+			pre_1 = - tf.log((tf.reduce_sum(prob[1] * label_1) + 1e-10) / (tf.reduce_sum(prob[1]) + 1e-10))
+
+			temp_2 = tf.constant([[0], [0], [0], [1]], tf.float32)
+			label_2 = tf.matmul(tf.cast(label, tf.float32), temp_2)
+			pre_2 = - tf.log((tf.reduce_sum(prob[2] * label_2) + 1e-10) / (tf.reduce_sum(prob[2]) + 1e-10))
+
+		if self.num_classes == 5:
+
+			temp_0 = tf.constant([[0], [1], [1], [1], [1]], tf.float32)
+			label_0 = tf.matmul(tf.cast(label, tf.float32), temp_0)
+			temp_0_1 = tf.constant([[1], [0], [0], [0], [0]], tf.float32)
+			label_0_1 = tf.matmul(tf.cast(label, tf.float32), temp_0_1)
+			pre_0 = 0.5 * (tf.reduce_sum(tf.square(1 - prob[0]) * label_0) + 1e-10) / (tf.reduce_sum(label_0) + 1e-10) + \
+						0.5 * (tf.reduce_sum(tf.square(prob[0]) * label_0_1) + 1e-10) / (tf.reduce_sum(label_0_1) + 1e-10)
+
+			temp_1 = tf.constant([[0], [1], [0], [1], [1]], tf.float32)
+			label_1 = tf.matmul(tf.cast(label, tf.float32), temp_1)
+			temp_1_1 = tf.constant([[1], [0], [1], [0], [0]], tf.float32)
+			label_1_1 = tf.matmul(tf.cast(label, tf.float32), temp_1_1)
+			pre_1 = 0.5 * (tf.reduce_sum(tf.square(1 - prob[1]) * label_1) + 1e-10) / (tf.reduce_sum(label_1) + 1e-10) + \
+						0.5 * (tf.reduce_sum(tf.square(prob[1]) * label_1_1) + 1e-10) / (tf.reduce_sum(label_1_1) + 1e-10)
+
+			temp_2 = tf.constant([[0], [0], [0], [0], [1]], tf.float32)
+			label_2 = tf.matmul(tf.cast(label, tf.float32), temp_2)
+			temp_2_1 = tf.constant([[1], [1], [1], [1], [0]], tf.float32)
+			label_2_1 = tf.matmul(tf.cast(label, tf.float32), temp_2_1)
+			pre_2 = 0.5 * (tf.reduce_sum(tf.square(1 - prob[2]) * label_2) + 1e-10) / (tf.reduce_sum(label_2) + 1e-10) + \
+						0.5 * (tf.reduce_sum(tf.square(prob[2]) * label_2_1) + 1e-10) / (tf.reduce_sum(label_2_1) + 1e-10)
+
+		return [pre_0, pre_1, pre_2]
+
+	def _IoU_loss(self, prob_list, label):
+		prob = []
+		for i in prob_list:
+			prob.append(tf.cast(i, tf.float32))
+
+		if self.num_classes == 5:
+			temp_0 = tf.constant([[0], [1], [1], [1], [1]], tf.float32)
+			label_0 = tf.matmul(tf.cast(label, tf.float32), temp_0)
+			temp_0_1 = tf.constant([[1], [0], [0], [0], [0]], tf.float32)
+			label_0_1 = tf.matmul(tf.cast(label, tf.float32), temp_0_1)
+			pre_0 = 0.1 * (tf.reduce_sum(tf.square(1 - prob[0]) * label_0) + 1e-10) / (tf.reduce_sum(label_0) + 1e-10) + \
+						0.9 * (tf.reduce_sum(tf.square(prob[0]) * label_0_1) + 1e-10) / (tf.reduce_sum(label_0_1) + 1e-10)
+
+			temp_1 = tf.constant([[0], [1], [0], [1], [1]], tf.float32)
+			label_1 = tf.matmul(tf.cast(label, tf.float32), temp_1)
+			temp_1_1 = tf.constant([[1], [0], [1], [0], [0]], tf.float32)
+			label_1_1 = tf.matmul(tf.cast(label, tf.float32), temp_1_1)
+			pre_1 = 0.1 * (tf.reduce_sum(tf.square(1 - prob[1]) * label_1) + 1e-10) / (tf.reduce_sum(label_1) + 1e-10) + \
+						0.9 * (tf.reduce_sum(tf.square(prob[1]) * label_1_1) + 1e-10) / (tf.reduce_sum(label_1_1) + 1e-10)
+
+			temp_2 = tf.constant([[0], [0], [0], [0], [1]], tf.float32)
+			label_2 = tf.matmul(tf.cast(label, tf.float32), temp_2)
+			temp_2_1 = tf.constant([[1], [1], [1], [1], [0]], tf.float32)
+			label_2_1 = tf.matmul(tf.cast(label, tf.float32), temp_2_1)
+			pre_2 = 0.1 * (tf.reduce_sum(tf.square(1 - prob[2]) * label_2) + 1e-10) / (tf.reduce_sum(label_2) + 1e-10) + \
+						0.9 * (tf.reduce_sum(tf.square(prob[2]) * label_2_1) + 1e-10) / (tf.reduce_sum(label_2_1) + 1e-10)
+
+		return [pre_0, pre_1, pre_2]
+
+
+	def _binary_eval(self, prob_list, label):
+		
+		prob = prob_list
+
+		if self.num_classes == 4:
+			label_0 = np.dot(label, np.array([[1], [0], [0], [0]]))
+			label_1 = np.dot(label, np.array([[0], [1], [1], [1]]))
+			label_2 = np.dot(label, np.array([[0], [1], [0], [1]]))
+			label_3 = np.dot(label, np.array([[0], [0], [0], [1]]))
+
+		elif self.num_classes == 5:
+			label_0 = np.dot(label, np.array([[1], [0], [0], [0], [0]]))
+			label_1 = np.dot(label, np.array([[0], [1], [1], [1], [1]]))
+			label_2 = np.dot(label, np.array([[0], [1], [0], [1], [1]]))
+			label_3 = np.dot(label, np.array([[0], [0], [0], [0], [1]]))
+
+		re_0 = (prob[0] < 0.5).reshape((-1))
+		recall_0 = np.dot(re_0, label_0) * 1.0 / np.sum(label_0)
+		pre_0 = np.dot(re_0, label_0) * 1.0 / np.sum(re_0) 
+		IoU_0 = np.dot(re_0, label_0) * 1.0 / (np.sum(label_0) + np.sum(re_0) - np.dot(re_0, label_0))
+		dice_0 = np.dot(re_0, label_0) * 2.0 / (np.sum(label_0) + np.sum(re_0))
+
+		re_1 = (prob[0] > 0.5).reshape((-1))
+		recall_1 = (np.dot(re_1, label_1) + 1e-10) * 1.0 / (np.sum(label_1) + 1e-10)
+		pre_1 = (np.dot(re_1, label_1) + 1e-10) * 1.0 / (np.sum(re_1) + 1e-10) 
+		IoU_1 = (np.dot(re_1, label_1) + 1e-10) * 1.0 / ((np.sum(label_1) + np.sum(re_1) - np.dot(re_1, label_1)) + 1e-10)
+		dice_1 = (np.dot(re_1, label_1) + 1e-10) * 2.0 / ((np.sum(label_1) + np.sum(re_1)) + 1e-10)
+
+		re_2 = np.logical_and((prob[1] > (prob[0] - prob[1])), prob[0] > 0.5).reshape((-1)) 
+		recall_2 = (np.dot(re_2, label_2) + 1e-10) * 1.0 / (np.sum(label_2) + 1e-10)
+		pre_2 = (np.dot(re_2, label_2) + 1e-10) * 1.0 / (np.sum(re_2) + 1e-10) 
+		IoU_2 = (np.dot(re_2, label_2) + 1e-10) * 1.0 / ((np.sum(label_2) + np.sum(re_2) - np.dot(re_2, label_2)) + 1e-10)
+		dice_2 = (np.dot(re_2, label_2) + 1e-10) * 2.0 / ((np.sum(label_2) + np.sum(re_2)) + 1e-10)
+
+		re_3 = np.logical_and((prob[2] > (prob[1] - prob[2])), np.logical_and((prob[1] > prob[0] - prob[1]), prob[0] > 0.5)).reshape((-1)) 
+		recall_3 = (np.dot(re_3, label_3)) * 1.0 / (np.sum(label_3) + 1e-10)
+		pre_3 = (np.dot(re_3, label_3)) * 1.0 / (np.sum(re_3) + 1e-10) 
+		IoU_3 = (np.dot(re_3, label_3)) * 1.0 / ((np.sum(label_3) + np.sum(re_3) - np.dot(re_3, label_3)) + 1e-10)
+		dice_3 = (np.dot(re_3, label_3)) * 2.0 / ((np.sum(label_3) + np.sum(re_3)) + 1e-10)
+
+		return np.array([[recall_0[0], recall_1[0], recall_2[0], recall_3[0]], 
+						[pre_0[0], pre_1[0], pre_2[0], pre_3[0]], 
+						[IoU_0[0], IoU_1[0], IoU_2[0], IoU_3[0]], 
+						[dice_0[0], dice_1[0], dice_2[0], dice_3[0]]])
+			
+
+
+	def _tf_eval(self, prob, label):
+		# if self.num_classes == 4:
+		# 	prob = tf.one_hot(tf.argmax(prob, axis = 1))
+					
+		# 	trans_mat_0 = tf.cosntant([[1, 0], [0, 1], [0, 1], [0, 1]])
+		# 	prob_0 = tf.matmul(prob, trans_mat_0)
+		# 	label_0 = tf.matmul(label, trans_mat_0)
+
+		# 	trans_mat_1 = tf.cosntant([[1, 0], [0, 1], [0, 1], [0, 1]])
+		# 	prob_1 = tf.matmul(prob, trans_mat_1)
+		# 	label_1 = tf.matmul(label, trans_mat_1)
+
+		# 	trans_mat_0 = tf.cosntant([[1, 0], [0, 1], [0, 1], [0, 1]])
+		# 	prob_0 = tf.matmul(prob, trans_mat_0)
+		# 	label_0 = tf.matmul(label, trans_mat_0)
+		
+		label = tf.reshape(label, [-1, self.num_classes])
+		con = self.confusion_matrix(prob, label)
+		
+
+
+
+	def _get_variable(self, name):
+		
+		g = tf.get_default_graph()
+		t = g.get_tensor_by_name(name)
+		return t 
 
 	def _print_variable_by_name(self, name):
 
