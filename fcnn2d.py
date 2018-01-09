@@ -34,12 +34,6 @@ class FCNN_2D:
 		self.last = time.time()
 
 
-	def confusion_matrix(self, prob, label):
-		labels = tf.argmax(label, axis = -1)
-		probs = tf.argmax(prob, axis = -1)
-		return tf.confusion_matrix(labels, probs, num_classes = self.num_classes)
-
-
 	def build(self, X, y):
 
 		conv1_1 = conv_layer(X, 'conv1_1_W', 'conv1_1_b', name='conv1_1')
@@ -90,6 +84,72 @@ class FCNN_2D:
 		confusion_matrix = self.confusion_matrix(prob, reshaped_labels)
 
 		return cross_entropy, prob, confusion_matrix
+
+	def evaluate(self, prob, label):
+
+		pre = Precision(prob, label)
+		IU = Intersection_Over_Union(prob, label)
+		dice = Dice(prob, label)
+
+		return pre, IU, dice
+
+	def confusion_matrix(self, prob, label):
+		labels = tf.argmax(label, axis = -1)
+		probs = tf.argmax(prob, axis = -1)
+		return tf.confusion_matrix(labels, probs, num_classes = self.num_classes)
+
+	def eval_with_conmat(self, conmat):
+		
+		if self.num_classes == 4:
+			recall_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / np.sum(conmat[1:4])
+			pre_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / np.sum(conmat[:, 1:4])
+			IoU_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / (np.sum(conmat) - conmat[0, 0])
+			dice_comp = np.sum(conmat[1:4, 1:4]) * 2.0 / (np.sum(conmat[1:4]) + np.sum(conmat[:, 1:4]))
+
+			recall_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / np.sum(conmat[(1, 3), :])
+			pre_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / np.sum(conmat[:, (1, 3)])
+			IoU_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / (np.sum(conmat[:, (1, 3)]) +\
+			 np.sum(conmat[(1, 3), :]) - np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]))
+			dice_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 2.0 / (np.sum(conmat[:, (1, 3)]) + np.sum(conmat[(1, 3), :]))
+
+			recall_enh = conmat[3, 3] * 1.0 / np.sum(conmat[3])
+			pre_enh = conmat[3, 3] * 1.0 / np.sum(conmat[:, 3])
+			Iou_enh = conmat[3, 3] * 1.0 / (np.sum(conmat[:, 3]) + np.sum(conmat[3]) - conmat[3, 3])
+			dice_enh = conmat[3, 3] * 2.0 / (np.sum(conmat[:, 3]) + np.sum(conmat[3]))
+
+			recall_non = conmat[0, 0] * 1.0 / np.sum(conmat[0])
+			pre_non = conmat[0, 0] * 1.0 / np.sum(conmat[:, 0])
+			Iou_non = conmat[0, 0] * 1.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]) - conmat[0, 0])
+			dice_non = conmat[0, 0] * 2.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]))
+
+		if self.num_classes == 5:
+			recall_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / np.sum(conmat[1:5])
+			pre_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / np.sum(conmat[:, 1:5])
+			IoU_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / (np.sum(conmat) - conmat[0, 0])
+			dice_comp = np.sum(conmat[1:5, 1:5]) * 2.0 / (np.sum(conmat[1:5]) + np.sum(conmat[:, 1:5]))
+
+			recall_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)]))  * 1.0 / (np.sum(conmat[(1, 3, 4), :]) + 1e-10)
+			pre_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 1.0 / (np.sum(conmat[:, (1, 3, 4)]) + 1e-10)
+			IoU_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 1.0 / ((np.sum(conmat[:, (1, 3, 4)]) +\
+			 np.sum(conmat[(1, 3, 4), :]) - np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) + 1e-10)
+			dice_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 2.0 / ((np.sum(conmat[(1, 3, 4), :]) +\
+			 np.sum(conmat[(1, 3, 4), :])) + 1e-10)
+
+			recall_enh = (conmat[4, 4]) * 1.0 / (np.sum(conmat[4]) + 1e-10)
+			pre_enh = (conmat[4, 4]) * 1.0 / (np.sum(conmat[:, 4]) + 1e-10)
+			Iou_enh = (conmat[4, 4]) * 1.0 / ((np.sum(conmat[:, 4]) + np.sum(conmat[4]) - conmat[4, 4]) + 1e-10)
+			dice_enh = (conmat[4, 4]) * 2.0 / ((np.sum(conmat[:, 4]) + np.sum(conmat[4])) + 1e-10)
+
+			recall_non = conmat[0, 0] * 1.0 / np.sum(conmat[0])
+			pre_non = conmat[0, 0] * 1.0 / np.sum(conmat[:, 0])
+			Iou_non = conmat[0, 0] * 1.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]) - conmat[0, 0])
+			dice_non = conmat[0, 0] * 2.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]))
+
+		return np.array([[recall_non, recall_comp, recall_kern, recall_enh], 
+						[pre_non, pre_comp, pre_kern, pre_enh], 
+						[Iou_non, IoU_comp, IoU_kern, Iou_enh], 
+						[dice_non, dice_comp, dice_kern, dice_enh]])
+
 
 	def train(self, X_input, y_input, 
 		model_name,
@@ -212,67 +272,6 @@ class FCNN_2D:
 
 		print 'Training Finished!'
 
-	def evaluate(self, prob, label):
-
-		pre = Precision(prob, label)
-		IU = Intersection_Over_Union(prob, label)
-		dice = Dice(prob, label)
-
-		return pre, IU, dice
-
-	def eval_with_conmat(self, conmat):
-		
-		if self.num_classes == 4:
-			recall_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / np.sum(conmat[1:4])
-			pre_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / np.sum(conmat[:, 1:4])
-			IoU_comp = np.sum(conmat[1:4, 1:4]) * 1.0 / (np.sum(conmat) - conmat[0, 0])
-			dice_comp = np.sum(conmat[1:4, 1:4]) * 2.0 / (np.sum(conmat[1:4]) + np.sum(conmat[:, 1:4]))
-
-			recall_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / np.sum(conmat[(1, 3), :])
-			pre_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / np.sum(conmat[:, (1, 3)])
-			IoU_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 1.0 / (np.sum(conmat[:, (1, 3)]) +\
-			 np.sum(conmat[(1, 3), :]) - np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]))
-			dice_kern = np.sum(conmat[(1, 1, 3, 3), (1, 3, 1, 3)]) * 2.0 / (np.sum(conmat[:, (1, 3)]) + np.sum(conmat[(1, 3), :]))
-
-			recall_enh = conmat[3, 3] * 1.0 / np.sum(conmat[3])
-			pre_enh = conmat[3, 3] * 1.0 / np.sum(conmat[:, 3])
-			Iou_enh = conmat[3, 3] * 1.0 / (np.sum(conmat[:, 3]) + np.sum(conmat[3]) - conmat[3, 3])
-			dice_enh = conmat[3, 3] * 2.0 / (np.sum(conmat[:, 3]) + np.sum(conmat[3]))
-
-			recall_non = conmat[0, 0] * 1.0 / np.sum(conmat[0])
-			pre_non = conmat[0, 0] * 1.0 / np.sum(conmat[:, 0])
-			Iou_non = conmat[0, 0] * 1.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]) - conmat[0, 0])
-			dice_non = conmat[0, 0] * 2.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]))
-
-		if self.num_classes == 5:
-			recall_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / np.sum(conmat[1:5])
-			pre_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / np.sum(conmat[:, 1:5])
-			IoU_comp = np.sum(conmat[1:5, 1:5]) * 1.0 / (np.sum(conmat) - conmat[0, 0])
-			dice_comp = np.sum(conmat[1:5, 1:5]) * 2.0 / (np.sum(conmat[1:5]) + np.sum(conmat[:, 1:5]))
-
-			recall_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)]))  * 1.0 / (np.sum(conmat[(1, 3, 4), :]) + 1e-10)
-			pre_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 1.0 / (np.sum(conmat[:, (1, 3, 4)]) + 1e-10)
-			IoU_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 1.0 / ((np.sum(conmat[:, (1, 3, 4)]) +\
-			 np.sum(conmat[(1, 3, 4), :]) - np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) + 1e-10)
-			dice_kern = (np.sum(conmat[(1,1,1,3,3,3,4,4,4), (1,3,4,1,3,4,1,3,4)])) * 2.0 / ((np.sum(conmat[(1, 3, 4), :]) +\
-			 np.sum(conmat[(1, 3, 4), :])) + 1e-10)
-
-			recall_enh = (conmat[4, 4]) * 1.0 / (np.sum(conmat[4]) + 1e-10)
-			pre_enh = (conmat[4, 4]) * 1.0 / (np.sum(conmat[:, 4]) + 1e-10)
-			Iou_enh = (conmat[4, 4]) * 1.0 / ((np.sum(conmat[:, 4]) + np.sum(conmat[4]) - conmat[4, 4]) + 1e-10)
-			dice_enh = (conmat[4, 4]) * 2.0 / ((np.sum(conmat[:, 4]) + np.sum(conmat[4])) + 1e-10)
-
-			recall_non = conmat[0, 0] * 1.0 / np.sum(conmat[0])
-			pre_non = conmat[0, 0] * 1.0 / np.sum(conmat[:, 0])
-			Iou_non = conmat[0, 0] * 1.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]) - conmat[0, 0])
-			dice_non = conmat[0, 0] * 2.0 / (np.sum(conmat[:, 0]) + np.sum(conmat[0]))
-
-		return np.array([[recall_non, recall_comp, recall_kern, recall_enh], 
-						[pre_non, pre_comp, pre_kern, pre_enh], 
-						[Iou_non, IoU_comp, IoU_kern, Iou_enh], 
-						[dice_non, dice_comp, dice_kern, dice_enh]])
-
-
 
 	def predict(self, model_name, X_test, y_test = None, dropout = 0.5):
 
@@ -311,7 +310,6 @@ class FCNN_2D:
 					pre, IU, dice = self.evaluate(prob_val, label_val)
 					conmat_t = self.eval_with_conmat(np.sum(con_list, axis = 0))
 					conmat = np.append(conmat, conmat_t.reshape([1, 4, 4]), axis = 0)
-
 
 					print i
 					print pre, np.mean(pre)
@@ -577,6 +575,7 @@ class FCNN_2D:
 					mean_IU = np.zeros([X_test.shape[0]])
 					mean_dice = np.zeros([X_test.shape[0]])
 					conmat = np.empty([0, 4, 4])
+					re = np.empty((N, D, W, H), dtype = 'uint8')
 					
 					# caculate every 3D image 
 					for i in xrange(N):
@@ -604,10 +603,12 @@ class FCNN_2D:
 						pre, IU, dice = self.evaluate(prob_val, label_val)
 
 						print i
-						print pre, np.mean(pre)
-						print IU, np.mean(IU)
-						print dice, np.mean(dice)
+						# print pre, np.mean(pre)
+						# print IU, np.mean(IU)
+						# print dice, np.mean(dice)
 						conmat_t = self.eval_with_conmat(np.sum(conmat_list, axis = 0))
+						re[i] = self._binary_predict([np.sum(prob_val[:, 1:5], axis = 1, keepdims = True), 
+							prob_val[:, 1:2] + np.sum(prob_val[:, 3:5], axis = 1, keepdims = True), prob_val[:, 4:5]]).reshape(D, W, H)
 						print conmat_t
 
 						mean_pre[i] = np.mean(pre)
@@ -617,6 +618,7 @@ class FCNN_2D:
 
 					print np.mean(mean_pre), '\n', np.mean(mean_IU), '\n', np.mean(mean_dice)
 					print np.mean(conmat, axis = 0)
+					np.save('./data/npz/' + model_name, re)
 
 						
 				elif len(X_test.shape) == 4:
@@ -980,30 +982,14 @@ class FCNN_2D:
 						[pre_0[0], pre_1[0], pre_2[0], pre_3[0]], 
 						[IoU_0[0], IoU_1[0], IoU_2[0], IoU_3[0]], 
 						[dice_0[0], dice_1[0], dice_2[0], dice_3[0]]])
-			
 
-
-	def _tf_eval(self, prob, label):
-		# if self.num_classes == 4:
-		# 	prob = tf.one_hot(tf.argmax(prob, axis = 1))
-					
-		# 	trans_mat_0 = tf.cosntant([[1, 0], [0, 1], [0, 1], [0, 1]])
-		# 	prob_0 = tf.matmul(prob, trans_mat_0)
-		# 	label_0 = tf.matmul(label, trans_mat_0)
-
-		# 	trans_mat_1 = tf.cosntant([[1, 0], [0, 1], [0, 1], [0, 1]])
-		# 	prob_1 = tf.matmul(prob, trans_mat_1)
-		# 	label_1 = tf.matmul(label, trans_mat_1)
-
-		# 	trans_mat_0 = tf.cosntant([[1, 0], [0, 1], [0, 1], [0, 1]])
-		# 	prob_0 = tf.matmul(prob, trans_mat_0)
-		# 	label_0 = tf.matmul(label, trans_mat_0)
-		
-		label = tf.reshape(label, [-1, self.num_classes])
-		con = self.confusion_matrix(prob, label)
-		
-
-
+	def _binary_predict(self, prob_list):
+		prob = prob_list
+		re = np.zeros_like(prob[0], dtype = 'uint8')
+		re[np.where(prob[0] > 0.5)] = 1
+		re[np.where(np.logical_and(prob[0] > 0.5, prob[1] > (prob[0] - prob[1])))] = 2
+		re[np.where(np.logical_and(prob[2] > (prob[1] - prob[2]), np.logical_and(prob[0] > 0.5, prob[1] > (prob[0] - prob[1]))))] = 3
+		return re
 
 	def _get_variable(self, name):
 		
