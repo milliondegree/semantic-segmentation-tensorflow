@@ -49,6 +49,23 @@ def stack_layer(parent, channel_in, channel_1, channel_2, is_training, name):
 
     return tf.nn.relu(bn_2 + shortcut)
 
+def stack_layer_not_act(parent, channel_in, channel_1, channel_2, is_training, name):
+
+    with tf.variable_scope(name):
+
+        conv_1 = conv_layer_res(parent, [3, 3, channel_in, channel_1], [1, 1, 1, 1], 'conv_1')
+        bn_1 = bn_layer(conv_1, is_training, 'bn_1')
+        conv_1_relu = tf.nn.relu(bn_1, name = 'relu_1')
+        conv_2 = conv_layer_res(conv_1_relu, [3, 3, channel_1, channel_2], [1, 1, 1, 1], 'conv_2')
+        bn_2 = bn_layer(conv_2, is_training, 'bn_2')
+
+        if channel_in != channel_2:
+            shortcut = conv_layer_res(parent, [1, 1, channel_in, channel_2], [1, 1, 1, 1], 'shortcut')
+        else:
+            shortcut = parent
+
+    return bn_2 + shortcut
+
 
 
 def conv_layer_res(parent, kernal_size, stride, name, if_bias = True, if_relu = False):
@@ -68,6 +85,48 @@ def conv_layer_res(parent, kernal_size, stride, name, if_bias = True, if_relu = 
             return tf.nn.relu(conv_with_bias)
         else:
             return conv_with_bias
+
+
+def atrous_conv_layer(parent, kernal_size, rate, name, if_bias = True, if_relu = False):
+    '''
+    Implementation of atrous convolutional layer
+    kernal_size = [H, W, in_C, out_C]
+    '''
+    with tf.variable_scope(name):
+        init = tf.truncated_normal_initializer(stddev = 0.0005)
+        weights = tf.get_variable(name = 'weights', shape = kernal_size, dtype = 'float32', initializer = init)
+        atrous_conv = tf.nn.atrous_conv2d(parent, weights, rate = rate, padding = 'SAME')
+
+        if if_bias:
+            bias = tf.get_variable(name = 'bias', shape = [kernal_size[-1]], dtype = 'float32', initializer = init)
+            conv_with_bias = tf.nn.bias_add(atrous_conv, bias)
+        else:
+            conv_with_bias = atrous_conv 
+
+        if if_relu:
+            return tf.nn.relu(conv_with_bias)
+        else:
+            return conv_with_bias
+
+def atrous_tuning_layer(parent, kernal_name, bias_name, rate, name):
+    '''
+    Implementation of atrous convolutional layer with VGG16 parameters
+    kernal_size = [H, W, in_C, out_C]
+    '''
+    with tf.variable_scope(name):
+        weights = _get_kernel(kernel_name)
+        init = tf.constant_initializer(value = kernel_weights, dtype=tf.float32)
+        kernel = tf.get_variable(name = "weights", initializer=init, shape=kernel_weights.shape)
+        atrous_conv = tf.nn.atrous_conv2d(parent, weights, rate = rate, padding='SAME')
+
+        bias = _get_bias(bias_name)
+        init = tf.constant_initializer(value=bias, dtype=tf.float32)
+        biases = tf.get_variable(name="biases", initializer=init, shape=bias.shape)
+
+        conv_with_bias = tf.nn.bias_add(atrous_conv, biases)
+        conv_with_relu = tf.nn.relu(conv_with_bias)
+    return conv_with_relu
+
 
 
 def bn_layer(parent, is_training, name):
