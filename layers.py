@@ -231,7 +231,7 @@ def up_layer_3d(parent, shape, output_channel, input_channel, upscale_factor, na
     with tf.variable_scope(name):
         output_shape = [shape[0], shape[1], shape[2], shape[3], output_channel]
         filter_shape = [kernel_size, kernel_size, kernel_size, output_channel, input_channel]
-        weights = _get_bilinear_filter(filter_shape, upscale_factor)
+        weights = _get_bilinear_filter_3d(filter_shape, upscale_factor)
         deconv = tf.nn.conv3d_transpose(parent, weights, output_shape,
                                         strides = strides, padding='SAME')
 
