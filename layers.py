@@ -49,6 +49,27 @@ def stack_layer(parent, channel_in, channel_1, channel_2, is_training, name):
 
     return tf.nn.relu(bn_2 + shortcut)
 
+
+def stack_layer_3d(parent, channel_in, channel_1, channel_2, is_training, name):
+
+    with tf.variable_scope(name):
+
+        conv_1 = conv_layer_res_3d(parent, [3, 3, 3, channel_in, channel_1], [1, 1, 1, 1, 1], 'conv_1')
+        bn_1 = bn_layer(conv_1, is_training, 'bn_1')
+        conv_1_relu = tf.nn.relu(bn_1, name = 'relu_1')
+        conv_2 = conv_layer_res_3d(conv_1_relu, [3, 3, 3, channel_1, channel_2], [1, 1, 1, 1, 1], 'conv_2')
+        bn_2 = bn_layer(conv_2, is_training, 'bn_2')
+
+        if channel_in != channel_2:
+            shortcut = conv_layer_res_3d(parent, [1, 1, 1, channel_in, channel_2], [1, 1, 1, 1, 1], 'shortcut')
+        else:
+            shortcut = parent
+
+    return tf.nn.relu(bn_2 + shortcut)
+
+
+
+
 def stack_layer_not_act(parent, channel_in, channel_1, channel_2, is_training, name):
 
     with tf.variable_scope(name):
@@ -85,6 +106,26 @@ def conv_layer_res(parent, kernal_size, stride, name, if_bias = True, if_relu = 
             return tf.nn.relu(conv_with_bias)
         else:
             return conv_with_bias
+
+
+def conv_layer_res_3d(parent, kernal_size, stride, name, if_bias = True, if_relu = False):
+
+    with tf.variable_scope(name):
+        init = tf.truncated_normal_initializer(stddev = 0.0005)
+        weights = tf.get_variable(name = 'weights', shape = kernal_size, dtype = 'float32', initializer = init)
+        conv = tf.nn.conv3d(parent, weights, stride, padding = 'SAME')
+
+        if if_bias:
+            bias = tf.get_variable(name = 'bias', shape = [kernal_size[-1]], dtype = 'float32', initializer = init)
+            conv_with_bias = tf.nn.bias_add(conv, bias)
+        else:
+            conv_with_bias = conv 
+
+        if if_relu:
+            return tf.nn.relu(conv_with_bias)
+        else:
+            return conv_with_bias
+
 
 
 def atrous_conv_layer(parent, kernal_size, rate, name, if_bias = True, if_relu = False):
@@ -180,6 +221,26 @@ def up_layer(parent, shape, output_channel, input_channel, upscale_factor, name)
         dconv_with_bias = tf.nn.bias_add(deconv, bias)
 
     return dconv_with_bias
+
+
+def up_layer_3d(parent, shape, output_channel, input_channel, upscale_factor, name):
+
+    kernel_size = 2 * upscale_factor - upscale_factor % 2
+    stride = upscale_factor
+    strides = [1, stride, stride, stride, 1]
+    with tf.variable_scope(name):
+        output_shape = [shape[0], shape[1], shape[2], shape[3], output_channel]
+        filter_shape = [kernel_size, kernel_size, kernel_size, output_channel, input_channel]
+        weights = _get_bilinear_filter(filter_shape, upscale_factor)
+        deconv = tf.nn.conv3d_transpose(parent, weights, output_shape,
+                                        strides = strides, padding='SAME')
+
+        bias_init = tf.constant(0.0, shape=[output_channel])
+        bias = tf.get_variable('bias', initializer = bias_init)
+        dconv_with_bias = tf.nn.bias_add(deconv, bias)
+
+    return dconv_with_bias
+
 
 
 

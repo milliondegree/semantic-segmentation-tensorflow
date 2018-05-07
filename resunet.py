@@ -8,6 +8,57 @@ from layers import *
 from auxiliary import *
 from pre_process import *
 
+class RES_UNET_3D(RES_NET):
+	
+	def build(self, X, y):
+		stack_1 = stack_layer_3d(X, 4, 64, 64, self.is_training, 'stack_1')
+		max_1 = max_pool_layer_3d(stack_1, [1, 2, 2, 2, 1], [1, 2, 2, 2, 1], 'max_1')
+	
+		stack_2 = stack_layer_3d(max_1, 64, 128, 128, self.is_training, 'stack_2')
+		max_2 = max_pool_layer_3d(stack_2, [1, 2, 2, 2, 1], [1, 2, 2, 2, 1], 'max_2')
+
+		stack_3 = stack_layer_3d(max_2, 128, 256, 256, self.is_training, 'stack_3')
+		max_3 = max_pool_layer_3d(stack_3, [1, 2, 2, 2, 1], [1, 2, 2, 2, 1], 'max_3')
+
+		stack_4 = stack_layer_3d(max_3, 256, 512, 512, self.is_training, 'stack_4')
+		max_4 = max_pool_layer_3d(stack_4, [1, 2, 2, 2, 1], [1, 2, 2, 2, 1], 'max_4')
+
+		stack_5 = stack_layer_3d(max_4, 512, 1024, 1024, self.is_training, 'stack_5')
+
+		# upsample layers No.1 for comp binary classification
+
+		upsample_6 = up_layer_3d(stack_5, tf.shape(stack_4), 512, 1024, 2, 'upsample_6')
+		concat_6 = tf.concat([upsample_6, stack_4], axis = 4)
+		stack_6 = stack_layer_3d(concat_6, 1024, 1024, 512, self.is_training, 'stack_6')
+
+		upsample_7 = up_layer_3d(stack_6, tf.shape(stack_3), 256, 512, 2, 'upsample_7')
+		concat_7 = tf.concat([upsample_7, stack_3], axis = 4)
+		stack_7 = stack_layer_3d(concat_7, 512, 512, 256, self.is_training, 'stack_7')
+
+		upsample_8 = up_layer_3d(stack_7, tf.shape(stack_2), 128, 256, 2, 'upsample_8')
+		concat_8 = tf.concat([upsample_8, stack_2], axis = 4)
+		stack_8 = stack_layer_3d(concat_8, 256, 256, 128, self.is_training, 'stack_8')
+
+		upsample_9 = up_layer_3d(stack_8, tf.shape(stack_1), 64, 128, 2, 'upsample_9')
+		concat_9 = tf.concat([upsample_9, stack_1], axis = 4)
+		stack_9 = stack_layer_3d(concat_9, 128, 128, 64, self.is_training, 'stack_9')
+
+		conv_10 = conv_layer_res_3d(stack_9, [1, 1, 1, 64, self.num_classes], [1, 1, 1, 1, 1], 'conv_10')
+
+
+		logits = conv_10
+		self.result = tf.argmax(logits, axis = 4)
+
+		reshaped_logits = tf.reshape(logits, [-1, self.num_classes])
+		reshaped_labels = tf.reshape(y, [-1, self.num_classes])
+
+		prob = tf.nn.softmax(logits = reshaped_logits)
+		cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits = reshaped_logits, labels = reshaped_labels)
+		confusion_matrix = self.confusion_matrix(prob, reshaped_labels)
+
+		return cross_entropy, prob, confusion_matrix
+
+
 
 class RES_UNET(RESNET):
 
@@ -436,8 +487,8 @@ class RES_UNET(RESNET):
 					exit(1)
 
 if __name__ == '__main__':
-	print 'loading from LGG_train.npz...'
-	f = np.load(Base + '/LGG_train.npz')
+	print 'loading from HGG_train.npz...'
+	f = np.load(Base + 'HGG_train.npz')
 	X = f['X']
 	y = f['y']
 
