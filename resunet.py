@@ -8,7 +8,7 @@ from layers import *
 from auxiliary import *
 from pre_process import *
 
-class RES_UNET_3D(RES_NET):
+class RESUNET_3D(RESNET):
 	
 	def build(self, X, y):
 		stack_1 = stack_layer_3d(X, 4, 64, 64, self.is_training, 'stack_1')
@@ -488,7 +488,7 @@ class RES_UNET(RESNET):
 
 if __name__ == '__main__':
 	print 'loading from HGG_train.npz...'
-	f = np.load(Base + 'HGG_train.npz')
+	f = np.load(Base + '/HGG_train2.npz')
 	X = f['X']
 	y = f['y']
 
@@ -499,8 +499,9 @@ if __name__ == '__main__':
 	net = RES_UNET(input_shape = (240, 240, 4), num_classes = 5)
 	# net.multi_gpu_train(X, y, model_name = 'model_resunet_5', train_mode = 1,
 	#  batch_size = 8, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 2e5)
+	net.multi_gpu_train(X, y, model_name = 'model_resunet_1', train_mode = 1, num_gpu = 1, 
+     batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e6, thre = 0.9)
+ 
 
-	net.multi_gpu_train(X, y, model_name = 'model_resunet_final', train_mode = 1,
-	 batch_size = 8, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e6)
 	# else:
 	# 	exit(0)
