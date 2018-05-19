@@ -1,7 +1,7 @@
 import tensorflow as tf 
 import numpy as np 
 
-vgg_weights = np.load('./data/pretrained_weights/vgg16_weights.npz')
+# vgg_weights = np.load('./data/pretrained_weights/vgg16_weights.npz')
 
 
 def bottle_layer(parent, channel_in, channel_1, channel_2, is_training, name):
