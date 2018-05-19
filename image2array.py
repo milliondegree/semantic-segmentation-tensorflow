@@ -4,7 +4,7 @@ import os
 import cPickle
 import random
 
-from mha_sitk import sitk_imshow
+# from mha_sitk import sitk_imshow
 
 HGG_base = './data/Brain_Tumor/BRATS2015_Training/HGG/'
 LGG_base = './data/Brain_Tumor/BRATS2015_Training/LGG/'
