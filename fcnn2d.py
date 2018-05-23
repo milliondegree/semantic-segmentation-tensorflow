@@ -882,7 +882,6 @@ class FCNN_2D:
             dice_2 = 1 - (tf.reduce_sum(prob[2] * label_2) + 1e-10) / (tf.reduce_sum(label_2) + tf.reduce_sum(prob[2]) + 1e-10) -\
                          (tf.reduce_sum((prob[1] - prob[2]) * label_2_1) + 1e-10) /\
                          (tf.reduce_sum(label_2_1) + tf.reduce_sum(prob[1] - prob[2]) + 1e-10)
-
         return [dice_0, dice_1, dice_2]
 
     def _binary_pre_loss(self, prob_list, label):
