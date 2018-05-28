@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
 	# ans = raw_input('Do you want to continue? [y/else]: ')
 	# if ans == 'y':
-	net = RESNET(input_shape = (240, 240, 4), num_classes = 5)
+	net = VGG_DICE(input_shape = (240, 240, 4), num_classes = 5)
 	net.multi_gpu_train(X, y, model_name = 'model_resnet_1', train_mode = 1, num_gpu = 1, 
      batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e10, thre = 1.0)
  

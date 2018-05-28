@@ -179,8 +179,8 @@ class RES_UNET(RESNET):
         reshaped_logits = tf.reshape(logits, [-1, self.num_classes])
         reshaped_labels = tf.reshape(y, [-1, self.num_classes])
         prob = tf.nn.softmax(logits = reshaped_logits)
-        prob_0 = tf.reduce_sum(prob[:, 1:5], axis = 1, keep_dims = True)
-        prob_1 = tf.reduce_sum(prob[:, 3:5], axis = 1, keep_dims = True) + tf.reshape(prob[:, 1], [-1, 1])
+        prob_0 = tf.reduce_sum(prob[:, 1:5], axis = 1, keepdims = True)
+        prob_1 = tf.reduce_sum(prob[:, 3:5], axis = 1, keepdims = True) + tf.reshape(prob[:, 1], [-1, 1])
         prob_2 = tf.reshape(prob[:, 4], [-1, 1])
 
         confusion_matrix = self.confusion_matrix(prob, reshaped_labels)
@@ -228,7 +228,7 @@ class RES_UNET(RESNET):
                             X, y, label = self._get_input()
                             prob, prob_0, prob_1, prob_2, _ = self.multi_binary_build(X, label)
                             loss_list = self._binary_dice_loss([prob_0, prob_1, prob_2], tf.reshape(label, [-1, self.num_classes]))
-                            loss = sum(loss_list) / 3
+                            loss = loss_list[0]*0.4+loss_list[1]*0.4+loss_list[2]*0.2
 
                             # add to collections
                             tf.add_to_collection('Xs', X)
@@ -514,7 +514,7 @@ if __name__ == '__main__':
     net = RES_UNET(input_shape = (240, 240, 4), num_classes = 5)
     # net.multi_gpu_train(X, y, model_name = 'model_resunet_5', train_mode = 1,
     #  batch_size = 8, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 2e5)
-    net.multi_dice_train(X, y, model_name = 'model_dice_1', train_mode = 1, num_gpu = 1, 
+    net.multi_dice_train(X, y, model_name = 'model_dice_3', train_mode = 1, num_gpu = 1, 
      batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e6, thre = 0.9)
  
 
