@@ -1,4 +1,5 @@
 import SimpleITK as sitk 
+import json
 import numpy as np 
 import os
 import cPickle
@@ -54,6 +55,9 @@ def get_file_lists(topdir):
 	temp_list = []
 	label_list = []
 
+	if not os.path.exists(topdir):
+		print 'file path does not exist'
+
 	i = 0
 	for dirpath, dirname, filenames in os.walk(topdir):
 		if filenames:
@@ -84,6 +88,15 @@ def Array2Image(from_path, to_path, array):
 
  
 if __name__ == '__main__':
+	file_list, label_list = get_file_lists('/home/ff/data/Brain_Tumor/BRATS2015_Training/HGG')
+	name_list =  [ele.split('/')[-3] for ele in label_list]
+	d = {}
+	d['file_list'] = file_list
+	d['label_list'] = label_list
+	d['name_list'] = name_list
+	with open('HGG_train.json', 'w') as f:
+		json.dump(d, f)
+	exit(0)
 
 	# Get HGG and LGG traing list with shape (n, 4) and label list with shape (n, )
 	HGG = []
