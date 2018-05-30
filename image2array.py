@@ -2,7 +2,7 @@ import SimpleITK as sitk
 import json
 import numpy as np 
 import os
-import cPickle
+import pickle
 import random
 
 # from mha_sitk import sitk_imshow
@@ -16,8 +16,8 @@ data_base = './data/Brain_Tumor/npz/'
 def write2File(data, labels, name):
 
 	writeFile = open(data_base + name, 'wb')
-	cPickle.dump(data, writeFile, 2)
-	cPickle.dump(labels, writeFile, 2)
+	pickle.dump(data, writeFile, 2)
+	pickle.dump(labels, writeFile, 2)
 	writeFile.close()
 
 def get_data(filelists, label):
@@ -33,14 +33,14 @@ def get_data(filelists, label):
 			temp_np = np.append(temp_np, imgdata.reshape(1, 155, 240, 240), axis = 0)
 		temp_np = temp_np.transpose((1, 2, 3, 0))
 		train_np = np.append(train_np, temp_np.reshape(1, 155, 240, 240, 4), axis = 0)
-		print train_np.shape
+		print(train_np.shape)
 		temp_np = np.empty([0, 155, 240, 240], dtype = 'int16')
 
 	for filename in label:
 		img = sitk.ReadImage(filename)
 		imgdata = sitk.GetArrayFromImage(img)
 		train_label_np = np.append(train_label_np, imgdata.reshape(1, 155, 240, 240), axis = 0)
-		print train_label_np.shape
+		print(train_label_np.shape)
 
 	return train_np, train_label_np
 
@@ -56,7 +56,7 @@ def get_file_lists(topdir):
 	label_list = []
 
 	if not os.path.exists(topdir):
-		print 'file path does not exist'
+		print('file path does not exist')
 
 	i = 0
 	for dirpath, dirname, filenames in os.walk(topdir):
@@ -85,13 +85,13 @@ def Array2Image(from_path, to_path, array):
 		sitk.WriteImage(img, to_path + '/VSD.Seg_zjc.' + num + '.mha')
 
 def single2Image(save_path, name, array):
-    print array.shape
-    print array.dtype
+    print(array.shape)
+    print(array.dtype)
     img = sitk.GetImageFromArray(array.astype(np.int64))
-    print save_path+'/'+name+'.mha'
+    print(save_path+'/'+name+'.mha')
     # help(img)
     sitk.WriteImage(img, save_path+'/'+name+'.mha')
-    print 'saving '+name+'finished'
+    print('saving '+name+'finished')
 
 def save_pred(array, save_path, name_file):
     if not os.path.exists(save_path):
@@ -99,15 +99,15 @@ def save_pred(array, save_path, name_file):
     N, D, W, H = array.shape
     d = json.loads(open(name_file, 'r').readline())
     name_list = d['name_list']
-    print len(name_list)
+    print(len(name_list))
     for i, name in enumerate(name_list):
         name = save_path+'/'+np.str(i)+'.mha'
         img = sitk.GetImageFromArray(array[i])
         sitk.WriteImage(img, name)
-        print name+' has been saved'
-    for i, name in enumerate(name_list):
-        os.rename(save_path+'/'+np.str(i)+'.mha', save_path+'/'+name+'.mha')
-        print 'rename '+name+' succeed'
+        print(name+' has been saved')
+    # for i, name in enumerate(name_list):
+        # os.rename(save_path+'/'+np.str(i)+'.mha', save_path+'/'+name+'.mha')
+        # print('rename '+name+' succeed')
 
 
 def five2four(array):
@@ -119,13 +119,13 @@ def five2four(array):
     return result
 
 if __name__ == '__main__':
-	file_list, label_list = get_file_lists('/home/ff/data/Brain_Tumor/BRATS2015_Training/HGG')
+	file_list, label_list = get_file_lists('/home/ff/data/Brain_Tumor/BRATS2015_Training/LGG')
 	name_list =  [ele.split('/')[-3] for ele in label_list]
 	d = {}
 	d['file_list'] = file_list
 	d['label_list'] = label_list
 	d['name_list'] = name_list
-	with open('HGG_train.json', 'w') as f:
+	with open('LGG_train.json', 'w') as f:
 		json.dump(d, f)
 	exit(0)
 
@@ -170,7 +170,7 @@ if __name__ == '__main__':
 				LGG_temp = []
 				i = 0
 
-	print len(HGG_label), len(HGG), len(LGG_label), len(LGG)
+	print(len(HGG_label), len(HGG), len(LGG_label), len(LGG))
 
 	# print 'HGG_label: ', HGG_label
 	# print ''
@@ -224,8 +224,8 @@ if __name__ == '__main__':
 		LGG_train_label.append(LGG_label[i])
 
 
-	print len(HGG_val), len(HGG_val_label), len(HGG_train), len(HGG_train_label)
-	print len(LGG_val), len(LGG_val_label), len(LGG_train), len(LGG_train_label)
+	print(len(HGG_val), len(HGG_val_label), len(HGG_train), len(HGG_train_label))
+	print(len(LGG_val), len(LGG_val_label), len(LGG_train), len(LGG_train_label))
 
 
 
@@ -253,22 +253,22 @@ if __name__ == '__main__':
 	# 	print 'Failed, ZannNenn'
 
 	HGG_val_np, HGG_val_label_np = get_data(HGG_val, HGG_val_label)
-	print 'Start Writing HGG_val.npz...'
+	print('Start Writing HGG_val.npz...')
 	np.savez(data_base + 'HGG_val.npz', HGG_val_np, HGG_val_label_np)
 	# write2File(HGG_val_np, HGG_val_label_np, 'HGG_val.pkl')
 
 	HGG_train_np, HGG_train_label_np = get_data(HGG_train, HGG_train_label)
-	print 'Start Writing HGG_train.npz...'
+	print('Start Writing HGG_train.npz...')
 	np.savez(data_base + 'HGG_train.npz', HGG_train_np, HGG_train_label_np)
 	# write2File(HGG_train_np, HGG_train_label_np, 'HGG_train.pkl')
 
 	LGG_val_np, LGG_val_label_np = get_data(LGG_val, LGG_val_label)
-	print 'Start Writing LGG_val.npz...'
+	print('Start Writing LGG_val.npz...')
 	np.savez(data_base + 'LGG_val.npz', LGG_val_np, LGG_val_label_np)
 	# write2File(LGG_val_np, LGG_val_label_np, 'LGG_val.pkl')
 
 	LGG_train_np, LGG_train_label_np = get_data(LGG_train, LGG_train_label)
-	print 'Start Writing LGG_train.npz...'
+	print('Start Writing LGG_train.npz...')
 	np.savez(data_base + 'LGG_train.npz', LGG_train_np, LGG_train_label_np)
 	# write2File(LGG_train_np, LGG_train_label_np, 'LGG_train.pkl')
 
