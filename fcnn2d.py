@@ -1,10 +1,12 @@
 import numpy as np
 import os
 import time
-import tensorflow as tf 
+import tensorflow as tf
+import json
 from layers import *
 from pre_process import remove_background_3d_with_label
 from auxiliary import *
+from image2array import single2Image, save_pred, five2four
 
 Base = '/nfs/project/zhanj7'
 
@@ -353,7 +355,7 @@ class FCNN_2D:
                 result = np.empty([N, D, W, H])
                 for i in xrange(N):
                     prob_val = self.sess.run(prob, feed_dict = {X: X_test[i], self.dropout: dropout, self.is_training: False})
-                    result[i] = np.argmax(prob_val.reshape(D, W, H, C), axis = -1)
+                    result[i] = np.argmax(prob_val.reshape(D, W, H, self.num_classes), axis = -1)
                 return result
 
             elif len(X_test.shape) == 4:
@@ -669,12 +671,13 @@ class FCNN_2D:
                     N, D, W, H, C = X_test.shape
                     result = np.empty((N, D, W, H))
                     for i in xrange(N):
+                        print 'predicting ', i
                         X_test_list = []
                         for j in xrange(num_gpu):
-                            X_test_list.append(X_test[i, j * D // 3:(j + 1) * D // 3])
-                        prob_val = self.sess.run(total_prob, feed_dict = {tuple(tf.get_collection('Xs')): tuple(X_test_list_val),
+                            X_test_list.append(X_test[i, j * D // num_gpu:(j + 1) * D // num_gpu])
+                        prob_val = self.sess.run(total_prob, feed_dict = {tuple(tf.get_collection('Xs')): tuple(X_test_list),
                          self.dropout: dropout, self.is_training: False})
-                        result[i] = np.argmax(prob_val.reshape(D, W, H, C), axis = -1)
+                        result[i] = np.argmax(prob_val.reshape(D, W, H, self.num_classes), axis = -1)
                     return result
 
                 elif len(X_test.shape) == 4:
@@ -690,6 +693,7 @@ class FCNN_2D:
                     print "input's dimention error!"
                     exit(1)
 
+    
 
     def _tower_loss(self, X, label, scope):
 
@@ -1102,8 +1106,12 @@ if __name__ == '__main__':
     # ans = raw_input('Do you want to continue? [y/else]: ')
     # if ans == 'y':
     net = FCNN_BASIC(input_shape = (240, 240, 4), num_classes = 5)
-    net.multi_gpu_train(X, y, model_name = 'model_vggfcn_1', train_mode = 1, num_gpu = 1, 
-     batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e10, thre = 1.0)
+    model_name = 'model_vggfcn_1_99'
+    pred = net.multi_gpu_predict(model_name, X, num_gpu=1)
+    pred = five2four(pred)
+    save_pred(pred, './prediction/'+model_name+'/HGG_train', 'HGG_train.json')
+    # net.multi_gpu_train(X, y, model_name = 'model_vggfcn_1', train_mode = 1, num_gpu = 1, 
+    #  batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e10, thre = 1.0)
     # else:
     #     exit(0)
 

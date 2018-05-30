@@ -7,6 +7,7 @@ from resnet import RESNET
 from layers import *
 from auxiliary import *
 from pre_process import *
+from image2array import five2four, save_pred
 
 class RESUNET_3D(RESNET):
     
@@ -388,7 +389,7 @@ class RES_UNET(RESNET):
 
                             # allocate input placeholder
                             X, y, label = self._get_input()
-                            prob_0, prob_1, prob_2 = self.multi_binary_build(X, label)
+                            _, prob_0, prob_1, prob_2, _ = self.multi_binary_build(X, label)
                             loss_list = self._binary_pre_loss([prob_0, prob_1, prob_2], tf.reshape(label, [-1, self.num_classes]))
                             loss = sum(loss_list) / 3
 
@@ -480,12 +481,23 @@ class RES_UNET(RESNET):
                     N, D, W, H, C = X_test.shape
                     result = np.empty((N, D, W, H))
                     for i in xrange(N):
+                        print 'predicting %d' % i
                         X_test_list = []
                         for j in xrange(num_gpu):
-                            X_test_list.append(X_test[i, j * D // 3:(j + 1) * D // 3])
-                        prob_val = self.sess.run(total_prob, feed_dict = {tuple(tf.get_collection('Xs')): tuple(X_test_list_val),
-                         self.dropout: dropout, self.is_training: False})
-                        result[i] = np.argmax(prob_val.reshape(D, W, H, C), axis = -1)
+                            X_test_list.append(X_test[i, j * D // num_gpu:(j + 1) * D // num_gpu])
+                        prob_val_0, prob_val_1, prob_val_2 = self.sess.run([total_prob_0,total_prob_1,
+                                total_prob_2], feed_dict = {tuple(tf.get_collection('Xs')): tuple(X_test_list),
+                                self.dropout: dropout, self.is_training: False})
+                        prob_val_0 = prob_val_0.reshape(D, W, H)
+                        prob_val_1 = prob_val_1.reshape(D, W, H)
+                        prob_val_2 = prob_val_2.reshape(D, W, H)
+                        a1, b1, c1 = np.where(prob_val_0>0.5)
+                        result[i, a1, b1, c1] = 1
+                        a2, b2, c2 = np.where(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)))
+                        result[i, a2, b2, c2] = 2
+                        a3, b3, c3 = np.where(np.logical_and(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)),
+                                    prob_val_2>prob_val_1-prob_val_2))
+                        result[i, a3, b3, c3] = 3
                     return result
 
                 elif len(X_test.shape) == 4:
@@ -511,11 +523,17 @@ if __name__ == '__main__':
 
     # ans = raw_input('Do you want to continue? [y/else]: ')
     # if ans == 'y':
+    y = five2four(y)
+    print y.shape
+    print y.max()
     net = RES_UNET(input_shape = (240, 240, 4), num_classes = 5)
+    model_name = 'model_dice_1_99'
+    pred = net.multi_dice_predict(model_name, X, num_gpu=1)
+    save_pred(pred, './prediction/'+model_name+'/HGG_train', './HGG_train.json')
     # net.multi_gpu_train(X, y, model_name = 'model_resunet_5', train_mode = 1,
     #  batch_size = 8, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 2e5)
-    net.multi_dice_train(X, y, model_name = 'model_dice_3', train_mode = 1, num_gpu = 1, 
-     batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e6, thre = 0.9)
+    # net.multi_dice_train(X, y, model_name = 'model_dice_3', train_mode = 1, num_gpu = 1, 
+    # batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e6, thre = 0.9)
  
 
     # else:

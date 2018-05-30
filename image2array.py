@@ -84,9 +84,40 @@ def Array2Image(from_path, to_path, array):
 		img = sitk.GetImageFromArray(array[i])
 		sitk.WriteImage(img, to_path + '/VSD.Seg_zjc.' + num + '.mha')
 
+def single2Image(save_path, name, array):
+    print array.shape
+    print array.dtype
+    img = sitk.GetImageFromArray(array.astype(np.int64))
+    print save_path+'/'+name+'.mha'
+    # help(img)
+    sitk.WriteImage(img, save_path+'/'+name+'.mha')
+    print 'saving '+name+'finished'
+
+def save_pred(array, save_path, name_file):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    N, D, W, H = array.shape
+    d = json.loads(open(name_file, 'r').readline())
+    name_list = d['name_list']
+    print len(name_list)
+    for i, name in enumerate(name_list):
+        name = save_path+'/'+np.str(i)+'.mha'
+        img = sitk.GetImageFromArray(array[i])
+        sitk.WriteImage(img, name)
+        print name+' has been saved'
+    for i, name in enumerate(name_list):
+        os.rename(save_path+'/'+np.str(i)+'.mha', save_path+'/'+name+'.mha')
+        print 'rename '+name+' succeed'
 
 
- 
+def five2four(array):
+    N, D, W, H = array.shape
+    result = np.empty(array.shape, array.dtype)
+    result[np.where(array==4)] = 3
+    result[np.where(np.logical_or(array==1, array==3))] = 2
+    result[np.where(array == 2)] = 1
+    return result
+
 if __name__ == '__main__':
 	file_list, label_list = get_file_lists('/home/ff/data/Brain_Tumor/BRATS2015_Training/HGG')
 	name_list =  [ele.split('/')[-3] for ele in label_list]
