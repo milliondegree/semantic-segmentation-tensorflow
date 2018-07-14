@@ -494,11 +494,15 @@ class RES_UNET(RESNET):
                         prob_val_2 = prob_val_2.reshape(D, W, H)
                         a1, b1, c1 = np.where(prob_val_0>0.5)
                         result[i, a1, b1, c1] = 2
+                        print np.bincount(result.reshape(-1))
                         a2, b2, c2 = np.where(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)))
                         result[i, a2, b2, c2] = 1
+                        print np.bincount(result.reshape(-1))
                         a3, b3, c3 = np.where(np.logical_and(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)),
                                     prob_val_2>prob_val_1-prob_val_2))
                         result[i, a3, b3, c3] = 4
+                        print np.bincount(result.reshape(-1))
+                        exit(0)
                     return result
 
                 elif len(X_test.shape) == 4:
