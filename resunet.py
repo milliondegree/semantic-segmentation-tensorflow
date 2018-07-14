@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import logging
 import h5py
 import time
 
@@ -205,7 +206,7 @@ class RES_UNET(RESNET):
         batch_size = 8, 
         learning_rate = 1e-4, 
         epoch = 25, 
-        dropout = 0.5,
+        dropout = 0.9,
         restore = False,
         N_worst = 1e6,
         thre = 0.9
@@ -257,10 +258,10 @@ class RES_UNET(RESNET):
             total_prob_2 = tf.concat(tf.get_collection('prob_2s'), axis = 0, name = 'total_prob_2')
             total_confusion_matrix = self.confusion_matrix(total_prob, total_label)
             miou_list = self.tf_eval(total_confusion_matrix)
-            
+
             for i, miou in enumerate(miou_list):
                 tf.summary.scalar('miou'+np.str(i), miou)
-            
+
             merged_summary_op = tf.summary.merge_all()
             summary_writer = tf.summary.FileWriter('./log/'+model_name, self.sess.graph)
 
@@ -283,9 +284,12 @@ class RES_UNET(RESNET):
                 start_epoch = 0
                 self.sess.run(tf.global_variables_initializer())
 
-            # Start training 
+            # Start training
+            logging.basicConfig(level=logging.DEBUG,
+                    fmt='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S',
+                    filename='./log/log/'+args.save_as+'_out.log', filemode='w')
             for e in xrange(start_epoch, start_epoch + epoch):
-
                 X_train, y_train, X_val, y_val = select_val_set(X_input, y_input)
                 X_train, y_train = remove_background_3d_with_label(X_train, y_train)
                 X_val, y_val = remove_background_3d_with_label(X_val, y_val)
@@ -298,7 +302,7 @@ class RES_UNET(RESNET):
                 indices = np.arange(num_train)
                 indices_val = np.arange(num_val)
                 ite_per_epoch = np.round(num_train / batch_size / num_gpu)
-            
+
                 self.last = time.time()
 
                 for i in xrange(ite_per_epoch):
@@ -318,15 +322,16 @@ class RES_UNET(RESNET):
                         [train_op, total_loss_list, merged_summary_op, global_step, miou_list], feed_dict = {
                         tuple(tf.get_collection('Xs')): tuple(X_list_val), tuple(tf.get_collection('ys')): tuple(y_list_val), 
                         self.dropout: dropout, self.N_worst: N_worst, self.thre: thre, self.is_training: True})
-                    
+
                     if (step+1)%10 == 0:
                         summary_writer.add_summary(summary, step)
-                        
+
                     now = time.time()
                     interval = now - self.last
                     self.last = time.time()
 
                     print 'ite ' + np.str(i) + ' time: ' + np.str(interval) + ' ', loss_list, miou_val
+                    logging.info('ite ' + np.str(i) + ' time: ' + np.str(interval) + ' ', loss_list, miou_val)
 
                 # Now it's time to evaluate on the validation data set
                 if X_val.shape[0] > 32 * num_gpu:
@@ -337,7 +342,7 @@ class RES_UNET(RESNET):
                         y_val_list_val.append(y_val[i * 32: (i + 1) * 32])
                     prob_0_val, prob_1_val, prob_2_val, label_val = self.sess.run([
                         total_prob_0, total_prob_1, total_prob_2, total_label], feed_dict = {
-                        tuple(tf.get_collection('Xs')): tuple(X_val_list_val), tuple(tf.get_collection('ys')): tuple(y_val_list_val), 
+                        tuple(tf.get_collection('Xs')): tuple(X_val_list_val), tuple(tf.get_collection('ys')): tuple(y_val_list_val),
                         self.dropout: dropout, self.N_worst: N_worst, self.thre: thre, self.is_training: False})
                     y_out = y_val[indices_val]
                 else:
@@ -348,14 +353,16 @@ class RES_UNET(RESNET):
                         y_val_list_val.append(y_val[i * y_val.shape[0] // num_gpu:(i + 1) * y_val.shape[0] // num_gpu])
                     prob_0_val, prob_1_val, prob_2_val, label_val = self.sess.run([
                         total_prob_0, total_prob_1, total_prob_2, total_label], feed_dict = {
-                        tuple(tf.get_collection('Xs')): tuple(X_val_list_val), tuple(tf.get_collection('ys')): tuple(y_val_list_val), 
+                        tuple(tf.get_collection('Xs')): tuple(X_val_list_val), tuple(tf.get_collection('ys')): tuple(y_val_list_val),
                         self.dropout: dropout, self.N_worst: N_worst, self.thre: thre, self.is_training: False})
                     y_out = y_val
-                
+
                 y_bin = np.bincount(y_out.reshape(-1), minlength = 4)
 
                 print 'epoch {0} finished'.format(e)
                 print self._binary_eval([prob_0_val, prob_1_val, prob_2_val], label_val)
+                logging.info('epoch %d finished' % e)
+                logging.info(str(self._binary_eval([prob_0_val, prob_1_val, prob_2_val], label_val)))
 
                 if train_mode == 0:
                     ans = raw_input('Do you want to save? [y/q/else]: ')
@@ -367,7 +374,7 @@ class RES_UNET(RESNET):
                 else:
                     if (e + 1) % 25 == 0:
                         l = model_name.split('_')
-                        saver.save(self.sess, './models/' + l[0] + '_' + l[1] + '_' + l[2] + '_' + np.str(e) + '.ckpt')     
+                        saver.save(self.sess, Base+'/models/' + l[0] + '_' + l[1] + '_' + l[2] + '_' + np.str(e) + '.ckpt')
                     else:
                         pass
 
@@ -480,7 +487,7 @@ class RES_UNET(RESNET):
             else:
                 if len(X_test.shape) == 5:
                     N, D, W, H, C = X_test.shape
-                    result = np.empty((N, D, W, H), np.uint8)
+                    result = np.zeros((N, D, W, H), np.uint8)
                     for i in xrange(N):
                         print 'predicting %d' % i
                         X_test_list = []
@@ -494,15 +501,14 @@ class RES_UNET(RESNET):
                         prob_val_2 = prob_val_2.reshape(D, W, H)
                         a1, b1, c1 = np.where(prob_val_0>0.5)
                         result[i, a1, b1, c1] = 2
-                        print np.bincount(result.reshape(-1))
+                        print np.bincount(result[i].reshape(-1))
                         a2, b2, c2 = np.where(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)))
                         result[i, a2, b2, c2] = 1
-                        print np.bincount(result.reshape(-1))
+                        print np.bincount(result[i].reshape(-1))
                         a3, b3, c3 = np.where(np.logical_and(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)),
                                     prob_val_2>prob_val_1-prob_val_2))
                         result[i, a3, b3, c3] = 4
-                        print np.bincount(result.reshape(-1))
-                        exit(0)
+                        print np.bincount(result[i].reshape(-1))
                     return result
 
                 elif len(X_test.shape) == 4:
@@ -521,8 +527,8 @@ class RES_UNET(RESNET):
 if __name__ == '__main__':
     print 'loading from HGG_train.npz...'
     f = h5py.File(Base+'/HGG_train.h5', 'r')
-    X = f.get('X')
-    y = f.get('y')
+    X = np.array(f.get('X'))
+    y = np.array(f.get('y'))
 
     print X.shape, y.shape
 
@@ -532,13 +538,13 @@ if __name__ == '__main__':
     # print y.shape
     # print y.max()
     net = RES_UNET(input_shape = (240, 240, 4), num_classes = 5)
-    model_name = 'model_dice_1_99'
-    pred = net.multi_dice_predict(model_name, X, num_gpu=1).astype('uint8')
-    save_pred(pred, Base+'/prediction/'+model_name+'/HGG_train', './HGG_train.json')
+    # model_name = 'model_dice_1_99'
+    # pred = net.multi_dice_predict(model_name, X, num_gpu=1).astype('uint8')
+    # save_pred(pred, Base+'/prediction/'+model_name+'/HGG_train', './HGG_train.json')
     # net.multi_gpu_train(X, y, model_name = 'model_resunet_5', train_mode = 1,
     #  batch_size = 8, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 2e5)
-    # net.multi_dice_train(X, y, model_name = 'model_dice_3', train_mode = 1, num_gpu = 1,
-    # batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e6, thre = 0.9)
+    net.multi_dice_train(X, y, model_name = 'model_dice_4', train_mode = 1, num_gpu = 4,
+        batch_size = 32*4, learning_rate = 2e-4, epoch = 200, restore = False, N_worst = 1e6, thre = 0.9)
 
     # else:
     #     exit(0)
