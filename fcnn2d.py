@@ -8,7 +8,7 @@ from pre_process import remove_background_3d_with_label
 from auxiliary import *
 from image2array import single2Image, save_pred, five2four
 
-Base = '/nfs/project/zhanj7'
+Base = '/nfs/project/zhanj7/brats'
 
 
 class FCNN_2D:
@@ -1107,7 +1107,7 @@ if __name__ == '__main__':
     # if ans == 'y':
     net = FCNN_BASIC(input_shape = (240, 240, 4), num_classes = 5)
     model_name = 'model_vggfcn_1_99'
-    pred = net.multi_gpu_predict(model_name, X, num_gpu=1)
+    pred = net.multi_gpu_predict(model_name, X, num_gpu=1).astype('uint8')
     pred = five2four(pred)
     save_pred(pred, './prediction/'+model_name+'/HGG_train', 'HGG_train.json')
     # net.multi_gpu_train(X, y, model_name = 'model_vggfcn_1', train_mode = 1, num_gpu = 1, 

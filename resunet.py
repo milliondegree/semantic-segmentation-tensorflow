@@ -1,5 +1,6 @@
-import tensorflow as tf 
-import numpy as np 
+import tensorflow as tf
+import numpy as np
+import h5py
 import time
 
 from fcnn2d import FCNN_2D, Base
@@ -209,7 +210,7 @@ class RES_UNET(RESNET):
         N_worst = 1e6,
         thre = 0.9
         ):
-        
+
         with tf.device('/cpu:0'):
 
             global_step = tf.get_variable(
@@ -421,9 +422,9 @@ class RES_UNET(RESNET):
 
                 if len(X_test.shape) == 5:
                     N, D, W, H, C = X_test.shape
-                    
+
                     final_eval_mat = np.empty([0, 4, 4])
-                    # caculate every 3D image 
+                    # caculate every 3D image
                     for i in xrange(N):
                         label_val = np.empty([0, self.num_classes])
                         prob_val_0 = np.empty([0, 1])
@@ -453,7 +454,7 @@ class RES_UNET(RESNET):
                         final_eval_mat = np.concatenate([final_eval_mat, conmat.reshape(1, 4, 4)], axis = 0)
                     print np.mean(final_eval_mat, axis = 0)
 
-                        
+
                 elif len(X_test.shape) == 4:
                     X_test_list_val = []
                     y_test_list_val = []
@@ -479,7 +480,7 @@ class RES_UNET(RESNET):
             else:
                 if len(X_test.shape) == 5:
                     N, D, W, H, C = X_test.shape
-                    result = np.empty((N, D, W, H))
+                    result = np.empty((N, D, W, H), np.uint8)
                     for i in xrange(N):
                         print 'predicting %d' % i
                         X_test_list = []
@@ -492,12 +493,12 @@ class RES_UNET(RESNET):
                         prob_val_1 = prob_val_1.reshape(D, W, H)
                         prob_val_2 = prob_val_2.reshape(D, W, H)
                         a1, b1, c1 = np.where(prob_val_0>0.5)
-                        result[i, a1, b1, c1] = 1
+                        result[i, a1, b1, c1] = 2
                         a2, b2, c2 = np.where(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)))
-                        result[i, a2, b2, c2] = 2
+                        result[i, a2, b2, c2] = 1
                         a3, b3, c3 = np.where(np.logical_and(np.logical_and(prob_val_0>0.5, prob_val_1>(prob_val_0-prob_val_1)),
                                     prob_val_2>prob_val_1-prob_val_2))
-                        result[i, a3, b3, c3] = 3
+                        result[i, a3, b3, c3] = 4
                     return result
 
                 elif len(X_test.shape) == 4:
@@ -515,26 +516,25 @@ class RES_UNET(RESNET):
 
 if __name__ == '__main__':
     print 'loading from HGG_train.npz...'
-    f = np.load(Base + '/HGG_train2.npz')
-    X = f['X']
-    y = f['y']
+    f = h5py.File(Base+'/HGG_train.h5', 'r')
+    X = f.get('X')
+    y = f.get('y')
 
-    print X.shape, y.shape        
+    print X.shape, y.shape
 
     # ans = raw_input('Do you want to continue? [y/else]: ')
     # if ans == 'y':
-    y = five2four(y)
-    print y.shape
-    print y.max()
+    # y = five2four(y)
+    # print y.shape
+    # print y.max()
     net = RES_UNET(input_shape = (240, 240, 4), num_classes = 5)
     model_name = 'model_dice_1_99'
-    pred = net.multi_dice_predict(model_name, X, num_gpu=1)
-    save_pred(pred, './prediction/'+model_name+'/HGG_train', './HGG_train.json')
+    pred = net.multi_dice_predict(model_name, X, num_gpu=1).astype('uint8')
+    save_pred(pred, Base+'/prediction/'+model_name+'/HGG_train', './HGG_train.json')
     # net.multi_gpu_train(X, y, model_name = 'model_resunet_5', train_mode = 1,
     #  batch_size = 8, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 2e5)
-    # net.multi_dice_train(X, y, model_name = 'model_dice_3', train_mode = 1, num_gpu = 1, 
+    # net.multi_dice_train(X, y, model_name = 'model_dice_3', train_mode = 1, num_gpu = 1,
     # batch_size = 32, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 1e6, thre = 0.9)
- 
 
     # else:
     #     exit(0)
