@@ -422,8 +422,8 @@ class RES_UNET(RESNET):
 
             saver = tf.train.Saver()
 
-            print 'loading from model ' + model_name 
-            saver.restore(self.sess, './models/' + model_name + '.ckpt')
+            print 'loading from model ' + model_name
+            saver.restore(self.sess, Base+'/models/' + model_name + '.ckpt')
 
             if y_test is not None:
 
@@ -538,13 +538,13 @@ if __name__ == '__main__':
     # print y.shape
     # print y.max()
     net = RES_UNET(input_shape = (240, 240, 4), num_classes = 5)
-    # model_name = 'model_dice_1_99'
-    # pred = net.multi_dice_predict(model_name, X, num_gpu=1).astype('uint8')
-    # save_pred(pred, Base+'/prediction/'+model_name+'/HGG_train', './HGG_train.json')
+    model_name = 'model_dice_6_124'
+    pred = net.multi_dice_predict(model_name, X, num_gpu=1).astype('uint8')
+    save_pred(pred, Base+'/prediction/'+model_name+'/HGG_train', './HGG_train.json')
     # net.multi_gpu_train(X, y, model_name = 'model_resunet_5', train_mode = 1,
     #  batch_size = 8, learning_rate = 5e-5, epoch = 100, restore = False, N_worst = 2e5)
-    net.multi_dice_train(X, y, model_name = 'model_dice_4', train_mode = 1, num_gpu = 4,
-        batch_size = 32*4, learning_rate = 2e-4, epoch = 200, restore = False, N_worst = 1e6, thre = 0.9)
+    # net.multi_dice_train(X, y, model_name = 'model_dice_4', train_mode = 1, num_gpu = 4,
+    #     batch_size = 32*4, learning_rate = 2e-4, epoch = 200, restore = False, N_worst = 1e6, thre = 0.9)
 
     # else:
     #     exit(0)
