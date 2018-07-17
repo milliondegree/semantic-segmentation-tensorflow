@@ -107,6 +107,10 @@ def save_pred(array, save_path, name_file):
         os.makedirs(save_path)
     N, D, W, H = array.shape
     # d = json.loads(open(name_file, 'r').readline())
+    l = json.loads(open(name_file, 'r').readline())
+    for i, name in enumerate(l):
+
+        name = save_path+'/'+name
     for i in range(220):
         name = save_path+'/'+np.str(i)+'.mha'
         img = sitk.GetImageFromArray(array[i])
@@ -133,7 +137,8 @@ if __name__ == '__main__':
 
     f_list, l_list = get_file_lists(Base+'/BRATS2015_Training/HGG')
     f_np, l_np = get_data(f_list, l_list)
-    json.dump(l_list, open('./HGG_train.json', 'w'))
+    json.dump(f_list, open('./HGG_train.json', 'w'))
+    exit(0)
 
     write2h5(f_np, l_np, Base+'/HGG_train.h5')
 
