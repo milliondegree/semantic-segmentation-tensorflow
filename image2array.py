@@ -108,17 +108,15 @@ def save_pred(array, save_path, name_file):
     N, D, W, H = array.shape
     # d = json.loads(open(name_file, 'r').readline())
     l = json.loads(open(name_file, 'r').readline())
-    for i, name in enumerate(l):
-
-        name = save_path+'/'+name
     for i in range(220):
         name = save_path+'/'+np.str(i)+'.mha'
         img = sitk.GetImageFromArray(array[i])
         sitk.WriteImage(img, name)
         print(name+' has been saved')
-    # for i, name in enumerate(name_list):
-        # os.rename(save_path+'/'+np.str(i)+'.mha', save_path+'/'+name+'.mha')
-        # print('rename '+name+' succeed')
+    for i, name in enumerate(l):
+        file_name = 'VSD.Seg_HG_zjc.'+name[0].split('/')[-2].split('.')[-1]
+        os.rename(save_path+'/'+np.str(i)+'.mha', save_path+'/'+file_name+'.mha')
+        print('rename '+file_name+' succeed')
 
 
 def five2four(array):
@@ -133,14 +131,18 @@ def five2four(array):
 
 
 if __name__ == '__main__':
+    a = np.ones((220, 4, 4, 4), dtype = np.uint16)
+    save_pred(a, Base+'/prediction/tmp', './HGG_train.json')
 
 
+    '''
     f_list, l_list = get_file_lists(Base+'/BRATS2015_Training/HGG')
-    f_np, l_np = get_data(f_list, l_list)
     json.dump(f_list, open('./HGG_train.json', 'w'))
+    f_np, l_np = get_data(f_list, l_list)
     exit(0)
 
     write2h5(f_np, l_np, Base+'/HGG_train.h5')
+    '''
 
     '''
     file_list, label_list = get_file_lists('/home/ff/data/Brain_Tumor/BRATS2015_Training/LGG')
